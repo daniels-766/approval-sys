@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% set active_page = 'dashboard' %}
+
+{% block title %}My Submissions - Approval System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">My Submissions</h1>
+    <p class="page-subtitle">Track and manage your submission requests</p>
+</div>
+
+{% if request.query_params.get('created') %}
+<div class="alert alert-success">Submission created successfully!</div>
+{% endif %}
+
+<div class="stats-grid">
+    <div class="stat-card total">
+        <div class="stat-value">{{ stats.total }}</div>
+        <div class="stat-label">Total</div>
+    </div>
+    <div class="stat-card pending">
+        <div class="stat-value">{{ stats.pending }}</div>
+        <div class="stat-label">Pending</div>
+    </div>
+    <div class="stat-card revision">
+        <div class="stat-value">{{ stats.need_revision }}</div>
+        <div class="stat-label">Need Revision</div>
+    </div>
+    <div class="stat-card approved">
+        <div class="stat-value">{{ stats.approved }}</div>
+        <div class="stat-label">Approved</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">All Submissions</span>
+        <a href="/user/submission/create" class="btn btn-primary btn-sm" id="btn-new-submission">
+            New Submission
+        </a>
+    </div>
+
+    {% if submissions %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Nominal</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sub in submissions %}
+                <tr>
+                    <td><strong>{{ sub.submission_code }}</strong></td>
+                    <td>{{ sub.name }}</td>
+                    <td>{{ sub.category.name }}</td>
+                    <td class="nominal-value">₹ {{ "{:,.2f}".format(sub.nominal) }}</td>
+                    <td>
+                        <span class="badge badge-{{ sub.status }}">
+                            {% if sub.status == 'need_revision' %}Need Revision{% else %}{{ sub.status | capitalize }}{% endif %}
+                        </span>
+                    </td>
+                    <td class="text-muted">{{ sub.created_at.strftime('%d %b %Y') }}</td>
+                    <td>
+                        <a href="/user/submission/{{ sub.id }}" class="btn btn-outline btn-sm">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">-</div>
+        <h3>No submissions yet</h3>
+        <p>Create your first submission to get started</p>
+        <a href="/user/submission/create" class="btn btn-primary mt-2">New Submission</a>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.stat-card.revision::before {
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+</style>
+{% endblock %}

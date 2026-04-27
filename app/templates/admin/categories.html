@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% set active_page = 'categories' %}
+
+{% block title %}Categories — Approval System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Categories</h1>
+    <p class="page-subtitle">Manage submission categories</p>
+</div>
+
+{% if request.query_params.get('created') %}
+<div class="alert alert-success">✅ Category created successfully!</div>
+{% endif %}
+{% if request.query_params.get('updated') %}
+<div class="alert alert-success">✅ Category updated successfully!</div>
+{% endif %}
+{% if request.query_params.get('error') == 'duplicate' %}
+<div class="alert alert-error">⚠️ Category name already exists!</div>
+{% endif %}
+
+<!-- Add Category -->
+<div class="card mb-3" style="max-width: 600px;">
+    <div class="card-title mb-3">Add New Category</div>
+    <form method="POST" action="/admin/categories" id="add-category-form">
+        <div class="form-group">
+            <label class="form-label" for="name">Category Name *</label>
+            <input type="text" class="form-control" id="name" name="name"
+                   placeholder="e.g. Business Travel" required>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="description">Description</label>
+            <textarea class="form-control" id="description" name="description" rows="2"
+                      placeholder="Brief description (optional)"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" id="btn-add-category">➕ Add Category</button>
+    </form>
+</div>
+
+<!-- Categories List -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">All Categories</span>
+    </div>
+
+    {% if categories %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cat in categories %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td><strong>{{ cat.name }}</strong></td>
+                    <td class="text-muted">{{ cat.description or '-' }}</td>
+                    <td>
+                        {% if cat.is_active %}
+                        <span class="badge badge-active">Active</span>
+                        {% else %}
+                        <span class="badge badge-inactive">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted">{{ cat.created_at.strftime('%d %b %Y') }}</td>
+                    <td>
+                        <div class="btn-group">
+                            <button class="btn btn-outline btn-sm"
+                                    data-edit-category="{{ cat.id }}"
+                                    data-name="{{ cat.name }}"
+                                    data-description="{{ cat.description or '' }}"
+                                    id="btn-edit-{{ cat.id }}">
+                                ✏️ Edit
+                            </button>
+                            <form method="POST" action="/admin/categories/{{ cat.id }}/toggle" style="display:inline;">
+                                <button type="submit" class="btn btn-sm {% if cat.is_active %}btn-danger{% else %}btn-success{% endif %}"
+                                        data-confirm="Toggle status for '{{ cat.name }}'?"
+                                        id="btn-toggle-{{ cat.id }}">
+                                    {% if cat.is_active %}Deactivate{% else %}Activate{% endif %}
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">🏷️</div>
+        <h3>No categories yet</h3>
+        <p>Add your first category above</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Edit Category Modal -->
+<div class="modal-overlay" id="editCategoryModal">
+    <div class="modal">
+        <div class="modal-title">Edit Category</div>
+        <form method="POST" action="" id="edit-category-form">
+            <div class="form-group">
+                <label class="form-label" for="edit-name">Category Name *</label>
+                <input type="text" class="form-control" id="edit-name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="edit-description">Description</label>
+                <textarea class="form-control" id="edit-description" name="description" rows="2"></textarea>
+            </div>
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary" id="btn-save-edit">💾 Save Changes</button>
+                <button type="button" class="btn btn-outline" data-modal-close>Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

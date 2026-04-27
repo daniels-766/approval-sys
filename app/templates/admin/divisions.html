@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% set active_page = 'divisions' %}
+
+{% block title %}Divisions - Approval System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Divisions</h1>
+    <p class="page-subtitle">Manage user divisions</p>
+</div>
+
+{% if request.query_params.get('created') %}
+<div class="alert alert-success">Division created successfully!</div>
+{% endif %}
+{% if request.query_params.get('updated') %}
+<div class="alert alert-success">Division updated successfully!</div>
+{% endif %}
+{% if request.query_params.get('users_updated') %}
+<div class="alert alert-success">Users updated successfully!</div>
+{% endif %}
+{% if request.query_params.get('error') == 'duplicate' %}
+<div class="alert alert-error">Division name already exists!</div>
+{% endif %}
+
+<!-- Add Division -->
+<div class="card mb-3" style="max-width: 600px;">
+    <div class="card-title mb-3">Add New Division</div>
+    <form method="POST" action="/admin/divisions" id="add-division-form">
+        <div class="form-group">
+            <label class="form-label" for="div-name">Division Name *</label>
+            <input type="text" class="form-control" id="div-name" name="name"
+                   placeholder="e.g. Finance" required>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="div-description">Description</label>
+            <textarea class="form-control" id="div-description" name="description" rows="2"
+                      placeholder="Brief description (optional)"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" id="btn-add-division">Add Division</button>
+    </form>
+</div>
+
+<!-- Divisions List -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">All Divisions</span>
+    </div>
+
+    {% if divisions %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Users</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for div in divisions %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td><strong>{{ div.name }}</strong></td>
+                    <td class="text-muted">{{ div.description or '-' }}</td>
+                    <td>{{ div.users | length }}</td>
+                    <td>
+                        {% if div.is_active %}
+                        <span class="badge badge-active">Active</span>
+                        {% else %}
+                        <span class="badge badge-inactive">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted">{{ div.created_at.strftime('%d %b %Y') }}</td>
+                    <td>
+                        <div class="btn-group">
+                            <button class="btn btn-outline btn-sm"
+                                    type="button"
+                                    data-modal="manageUsersModal-{{ div.id }}"
+                                    id="btn-manage-users-{{ div.id }}">
+                                Users
+                            </button>
+                            <button class="btn btn-outline btn-sm"
+                                    type="button"
+                                    data-edit-division="{{ div.id }}"
+                                    data-name="{{ div.name }}"
+                                    data-description="{{ div.description or '' }}"
+                                    id="btn-edit-div-{{ div.id }}">
+                                Edit
+                            </button>
+                            <form method="POST" action="/admin/divisions/{{ div.id }}/toggle" style="display:inline;">
+                                <button type="submit" class="btn btn-sm {% if div.is_active %}btn-danger{% else %}btn-success{% endif %}"
+                                        data-confirm="Toggle status for '{{ div.name }}'?"
+                                        id="btn-toggle-div-{{ div.id }}">
+                                    {% if div.is_active %}Deactivate{% else %}Activate{% endif %}
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">-</div>
+        <h3>No divisions yet</h3>
+        <p>Add your first division above</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Manage Users Modals -->
+{% for div in divisions %}
+<div class="modal-overlay" id="manageUsersModal-{{ div.id }}">
+    <div class="modal">
+        <div class="modal-title">Manage Users - {{ div.name }}</div>
+        <form method="POST" action="/admin/divisions/{{ div.id }}/users">
+            {% if users %}
+            <div class="user-checkbox-list">
+                {% for user in users %}
+                <label class="user-checkbox-row" for="division-{{ div.id }}-user-{{ user.id }}">
+                    <input type="checkbox"
+                           id="division-{{ div.id }}-user-{{ user.id }}"
+                           name="user_ids"
+                           value="{{ user.id }}"
+                           {% if user in div.users %}checked{% endif %}>
+                    <span>
+                        <strong>{{ user.full_name }}</strong>
+                        <small>{{ user.username }} - {{ user.email }}</small>
+                    </span>
+                </label>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state" style="padding: 24px 0;">
+                <h3>No active users</h3>
+                <p>Create active user accounts before assigning divisions.</p>
+            </div>
+            {% endif %}
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary" id="btn-save-users-{{ div.id }}">Save Users</button>
+                <button type="button" class="btn btn-outline" data-modal-close>Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Edit Division Modal -->
+<div class="modal-overlay" id="editDivisionModal">
+    <div class="modal">
+        <div class="modal-title">Edit Division</div>
+        <form method="POST" action="" id="edit-division-form">
+            <div class="form-group">
+                <label class="form-label" for="edit-div-name">Division Name *</label>
+                <input type="text" class="form-control" id="edit-div-name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="edit-div-description">Description</label>
+                <textarea class="form-control" id="edit-div-description" name="description" rows="2"></textarea>
+            </div>
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary" id="btn-save-div-edit">Save Changes</button>
+                <button type="button" class="btn btn-outline" data-modal-close>Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('[data-edit-division]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.editDivision;
+            const name = this.dataset.name;
+            const description = this.dataset.description;
+            document.getElementById('edit-div-name').value = name;
+            document.getElementById('edit-div-description').value = description;
+            document.getElementById('edit-division-form').action = '/admin/divisions/' + id + '/update';
+            document.getElementById('editDivisionModal').classList.add('show');
+        });
+    });
+});
+</script>
+
+<style>
+.user-checkbox-list {
+    max-height: 360px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+}
+
+.user-checkbox-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+    cursor: pointer;
+}
+
+.user-checkbox-row:last-child {
+    border-bottom: none;
+}
+
+.user-checkbox-row:hover {
+    background: rgba(99, 102, 241, 0.06);
+}
+
+.user-checkbox-row input {
+    margin-top: 4px;
+}
+
+.user-checkbox-row small {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+}
+</style>
+{% endblock %}

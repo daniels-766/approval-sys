@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% set active_page = 'dashboard' %}
+
+{% block title %}Admin Dashboard - Approval System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">Overview of all submissions</p>
+</div>
+
+{% if request.query_params.get('approved') %}
+<div class="alert alert-success">Submission approved successfully!</div>
+{% endif %}
+{% if request.query_params.get('rejected') %}
+<div class="alert alert-warning">Submission rejected.</div>
+{% endif %}
+{% if request.query_params.get('revision') %}
+<div class="alert alert-warning">Revision requested.</div>
+{% endif %}
+
+<div class="stats-grid">
+    <div class="stat-card total">
+        <div class="stat-value">{{ stats.total }}</div>
+        <div class="stat-label">Total Submissions</div>
+    </div>
+    <div class="stat-card pending">
+        <div class="stat-value">{{ stats.pending }}</div>
+        <div class="stat-label">Pending Review</div>
+    </div>
+    <div class="stat-card revision">
+        <div class="stat-value">{{ stats.need_revision }}</div>
+        <div class="stat-label">Need Revision</div>
+    </div>
+    <div class="stat-card approved">
+        <div class="stat-value">{{ stats.approved }}</div>
+        <div class="stat-label">Approved</div>
+    </div>
+    <div class="stat-card rejected">
+        <div class="stat-value">{{ stats.rejected }}</div>
+        <div class="stat-label">Rejected</div>
+    </div>
+</div>
+
+<div class="filter-tabs">
+    <a href="/admin/dashboard" class="filter-tab {% if current_filter == 'all' %}active{% endif %}">All</a>
+    <a href="/admin/dashboard?status=pending" class="filter-tab {% if current_filter == 'pending' %}active{% endif %}">Pending</a>
+    <a href="/admin/dashboard?status=need_revision" class="filter-tab {% if current_filter == 'need_revision' %}active{% endif %}">Need Revision</a>
+    <a href="/admin/dashboard?status=approved" class="filter-tab {% if current_filter == 'approved' %}active{% endif %}">Approved</a>
+    <a href="/admin/dashboard?status=rejected" class="filter-tab {% if current_filter == 'rejected' %}active{% endif %}">Rejected</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-title mb-3">Search and Filter</div>
+    <form method="GET" action="/admin/dashboard" class="filter-form">
+        <div class="filter-grid">
+            <div class="form-group">
+                <label class="form-label" for="keyword">Keyword</label>
+                <input class="form-control" id="keyword" name="keyword" value="{{ filters.keyword }}"
+                       placeholder="Code, name, purpose, user">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="status">Status</label>
+                <select class="form-control" id="status" name="status">
+                    <option value="">All</option>
+                    <option value="pending" {% if current_filter == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="need_revision" {% if current_filter == 'need_revision' %}selected{% endif %}>Need Revision</option>
+                    <option value="approved" {% if current_filter == 'approved' %}selected{% endif %}>Approved</option>
+                    <option value="rejected" {% if current_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="category_id">Category</label>
+                <select class="form-control" id="category_id" name="category_id">
+                    <option value="">All</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}" {% if filters.category_id == category.id %}selected{% endif %}>{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="division_id">Division</label>
+                <select class="form-control" id="division_id" name="division_id">
+                    <option value="">All</option>
+                    {% for division in divisions %}
+                    <option value="{{ division.id }}" {% if filters.division_id == division.id %}selected{% endif %}>{{ division.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="user_id">User</label>
+                <select class="form-control" id="user_id" name="user_id">
+                    <option value="">All</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}" {% if filters.user_id == user.id %}selected{% endif %}>{{ user.full_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="date_from">From</label>
+                <input class="form-control" type="date" id="date_from" name="date_from" value="{{ filters.date_from }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="date_to">To</label>
+                <input class="form-control" type="date" id="date_to" name="date_to" value="{{ filters.date_to }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="min_nominal">Min Nominal</label>
+                <input class="form-control" id="min_nominal" name="min_nominal" value="{{ filters.min_nominal }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="max_nominal">Max Nominal</label>
+                <input class="form-control" id="max_nominal" name="max_nominal" value="{{ filters.max_nominal }}">
+            </div>
+        </div>
+        <div class="btn-group">
+            <button type="submit" class="btn btn-primary">Apply</button>
+            <a href="/admin/dashboard" class="btn btn-outline">Reset</a>
+            <a href="/admin/dashboard/export{% if request.url.query %}?{{ request.url.query }}{% endif %}" class="btn btn-success">Export CSV</a>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">Submissions</span>
+    </div>
+
+    {% if submissions %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Submitted By</th>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Nominal</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sub in submissions %}
+                <tr>
+                    <td><strong>{{ sub.submission_code }}</strong></td>
+                    <td>{{ sub.user.full_name }}</td>
+                    <td>{{ sub.name }}</td>
+                    <td>{{ sub.category.name }}</td>
+                    <td class="nominal-value">₹ {{ "{:,.2f}".format(sub.nominal) }}</td>
+                    <td>
+                        <span class="badge badge-{{ sub.status }}">
+                            {% if sub.status == 'need_revision' %}Need Revision{% else %}{{ sub.status | capitalize }}{% endif %}
+                        </span>
+                    </td>
+                    <td class="text-muted">{{ sub.created_at.strftime('%d %b %Y') }}</td>
+                    <td>
+                        <a href="/admin/submission/{{ sub.id }}" class="btn btn-outline btn-sm">
+                            {% if sub.status in ['pending', 'need_revision'] %}Review{% else %}View{% endif %}
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">-</div>
+        <h3>No submissions found</h3>
+        <p>There are no submissions matching your filter</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.stat-card.revision::before {
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+</style>
+{% endblock %}

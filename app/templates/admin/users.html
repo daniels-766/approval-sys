@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+{% set active_page = 'users' %}
+
+{% block title %}User Management - Approval System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">User Management</h1>
+    <p class="page-subtitle">Manage accounts, roles, status, passwords, and divisions</p>
+</div>
+
+{% if request.query_params.get('created') %}
+<div class="alert alert-success">User created successfully.</div>
+{% endif %}
+{% if request.query_params.get('updated') %}
+<div class="alert alert-success">User updated successfully.</div>
+{% endif %}
+{% if request.query_params.get('password') %}
+<div class="alert alert-success">Password reset successfully.</div>
+{% endif %}
+{% if request.query_params.get('error') == 'username' %}
+<div class="alert alert-error">Username already exists.</div>
+{% endif %}
+{% if request.query_params.get('error') == 'email' %}
+<div class="alert alert-error">Email already exists.</div>
+{% endif %}
+{% if request.query_params.get('error') == 'password' %}
+<div class="alert alert-error">Password must be at least 6 characters.</div>
+{% endif %}
+
+<div class="card mb-3">
+    <div class="card-title mb-3">Add User</div>
+    <form method="POST" action="/admin/users">
+        <div class="user-form-grid">
+            <div class="form-group">
+                <label class="form-label" for="full_name">Full Name *</label>
+                <input class="form-control" id="full_name" name="full_name" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="username">Username *</label>
+                <input class="form-control" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="email">Email *</label>
+                <input class="form-control" id="email" name="email" type="email" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="password">Password *</label>
+                <input class="form-control" id="password" name="password" type="password" minlength="6" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="role">Role</label>
+                <select class="form-control" id="role" name="role">
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Divisions</label>
+            <div class="checkbox-grid">
+                {% for division in divisions %}
+                <label class="checkbox-row">
+                    <input type="checkbox" name="division_ids" value="{{ division.id }}">
+                    <span>{{ division.name }}</span>
+                </label>
+                {% else %}
+                <span class="text-muted">No active divisions yet.</span>
+                {% endfor %}
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Add User</button>
+    </form>
+</div>
+
+<div class="card mb-3">
+    <div class="card-title mb-3">Search and Filter</div>
+    <form method="GET" action="/admin/users">
+        <div class="user-form-grid">
+            <div class="form-group">
+                <label class="form-label" for="keyword">Keyword</label>
+                <input class="form-control" id="keyword" name="keyword" value="{{ filters.keyword }}"
+                       placeholder="Name, username, email">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="filter-role">Role</label>
+                <select class="form-control" id="filter-role" name="role">
+                    <option value="">All</option>
+                    <option value="user" {% if filters.role == 'user' %}selected{% endif %}>User</option>
+                    <option value="admin" {% if filters.role == 'admin' %}selected{% endif %}>Admin</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="active">Status</label>
+                <select class="form-control" id="active" name="active">
+                    <option value="">All</option>
+                    <option value="active" {% if filters.active == 'active' %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if filters.active == 'inactive' %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+        </div>
+        <div class="btn-group">
+            <button type="submit" class="btn btn-primary">Apply</button>
+            <a href="/admin/users" class="btn btn-outline">Reset</a>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">Users</span>
+    </div>
+
+    {% if users %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Divisions</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td><strong>{{ user.full_name }}</strong></td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.role | capitalize }}</td>
+                    <td>
+                        {% if user.divisions %}
+                        {{ user.divisions | map(attribute='name') | join(', ') }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.is_active %}
+                        <span class="badge badge-active">Active</span>
+                        {% else %}
+                        <span class="badge badge-inactive">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="btn-group">
+                            <button class="btn btn-outline btn-sm" type="button" data-modal="editUserModal-{{ user.id }}">Edit</button>
+                            <button class="btn btn-outline btn-sm" type="button" data-modal="passwordModal-{{ user.id }}">Password</button>
+                            <form method="POST" action="/admin/users/{{ user.id }}/toggle" style="display:inline;">
+                                <button type="submit" class="btn btn-sm {% if user.is_active %}btn-danger{% else %}btn-success{% endif %}"
+                                        data-confirm="Toggle status for {{ user.full_name }}?"
+                                        {% if user.id == session.get('user_id') %}disabled{% endif %}>
+                                    {% if user.is_active %}Deactivate{% else %}Activate{% endif %}
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">-</div>
+        <h3>No users found</h3>
+        <p>Try changing the filters or add a new user.</p>
+    </div>
+    {% endif %}
+</div>
+
+{% for user in users %}
+<div class="modal-overlay" id="editUserModal-{{ user.id }}">
+    <div class="modal modal-wide">
+        <div class="modal-title">Edit {{ user.full_name }}</div>
+        <form method="POST" action="/admin/users/{{ user.id }}/update">
+            <div class="user-form-grid">
+                <div class="form-group">
+                    <label class="form-label" for="edit-full-name-{{ user.id }}">Full Name *</label>
+                    <input class="form-control" id="edit-full-name-{{ user.id }}" name="full_name" value="{{ user.full_name }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="edit-username-{{ user.id }}">Username *</label>
+                    <input class="form-control" id="edit-username-{{ user.id }}" name="username" value="{{ user.username }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="edit-email-{{ user.id }}">Email *</label>
+                    <input class="form-control" id="edit-email-{{ user.id }}" name="email" type="email" value="{{ user.email }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="edit-role-{{ user.id }}">Role</label>
+                    <select class="form-control" id="edit-role-{{ user.id }}" name="role">
+                        <option value="user" {% if user.role == 'user' %}selected{% endif %}>User</option>
+                        <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+                    </select>
+                </div>
+            </div>
+            <label class="checkbox-row mb-2">
+                <input type="checkbox" name="is_active" value="1" {% if user.is_active %}checked{% endif %}>
+                <span>Active</span>
+            </label>
+            <div class="form-group">
+                <label class="form-label">Divisions</label>
+                <div class="checkbox-grid">
+                    {% for division in divisions %}
+                    <label class="checkbox-row">
+                        <input type="checkbox" name="division_ids" value="{{ division.id }}"
+                               {% if division in user.divisions %}checked{% endif %}>
+                        <span>{{ division.name }}</span>
+                    </label>
+                    {% else %}
+                    <span class="text-muted">No active divisions yet.</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <button type="button" class="btn btn-outline" data-modal-close>Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-overlay" id="passwordModal-{{ user.id }}">
+    <div class="modal">
+        <div class="modal-title">Reset Password - {{ user.full_name }}</div>
+        <form method="POST" action="/admin/users/{{ user.id }}/password">
+            <div class="form-group">
+                <label class="form-label" for="password-{{ user.id }}">New Password *</label>
+                <input class="form-control" id="password-{{ user.id }}" name="password" type="password" minlength="6" required>
+            </div>
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary">Reset Password</button>
+                <button type="button" class="btn btn-outline" data-modal-close>Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endfor %}
+
+<style>
+.user-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+}
+
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+}
+
+.modal-wide {
+    max-width: 760px;
+}
+</style>
+{% endblock %}

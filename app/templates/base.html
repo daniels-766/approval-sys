@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Approval System - Manage submissions and approvals">
+    <title>{% block title %}Approval System{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% block body %}
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-brand">
+                    <div class="brand-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 7h16"></path>
+                            <path d="M4 17h16"></path>
+                            <path d="M7 4v16"></path>
+                            <path d="M17 4v16"></path>
+                        </svg>
+                    </div>
+                    <span class="brand-text">Approval Sys</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                {% if session.get('role') == 'admin' %}
+                <div class="nav-section-title">Main</div>
+                <a href="/admin/dashboard" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" id="nav-dashboard">
+                    <span class="nav-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 3v18h18"></path>
+                            <path d="M7 14l4-4 3 3 5-7"></path>
+                        </svg>
+                    </span>
+                    Dashboard
+                </a>
+                <div class="nav-section-title">Management</div>
+                <a href="/admin/categories" class="nav-link {% if active_page == 'categories' %}active{% endif %}" id="nav-categories">
+                    <span class="nav-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M7 7h10"></path>
+                            <path d="M7 12h10"></path>
+                            <path d="M7 17h10"></path>
+                            <path d="M5 7h.01"></path>
+                            <path d="M5 12h.01"></path>
+                            <path d="M5 17h.01"></path>
+                        </svg>
+                    </span>
+                    Categories
+                </a>
+                <a href="/admin/divisions" class="nav-link {% if active_page == 'divisions' %}active{% endif %}" id="nav-divisions">
+                    <span class="nav-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 21h18"></path>
+                            <path d="M5 21V7l7-4 7 4v14"></path>
+                            <path d="M9 21v-8h6v8"></path>
+                        </svg>
+                    </span>
+                    Divisions
+                </a>
+                <a href="/admin/users" class="nav-link {% if active_page == 'users' %}active{% endif %}" id="nav-users">
+                    <span class="nav-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21a8 8 0 0 0-16 0"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </span>
+                    User Management
+                </a>
+                {% else %}
+                <div class="nav-section-title">Main</div>
+                <a href="/user/dashboard" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" id="nav-dashboard">
+                    <span class="nav-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20"></path>
+                            <path d="M20 2H8a2 2 0 0 0-2 2v18"></path>
+                            <path d="M16 2v8H8V2"></path>
+                        </svg>
+                    </span>
+                    My Submissions
+                </a>
+                <a href="/user/submission/create" class="nav-link {% if active_page == 'create' %}active{% endif %}" id="nav-create">
+                    <span class="nav-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 5v14"></path>
+                            <path d="M5 12h14"></path>
+                        </svg>
+                    </span>
+                    New Submission
+                </a>
+                {% endif %}
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar">{{ session.get('full_name', 'U')[0] | upper }}</div>
+                    <div class="user-details">
+                        <div class="user-name">{{ session.get('full_name', 'User') }}</div>
+                        <div class="user-role">{{ session.get('role', 'user') }}</div>
+                    </div>
+                </div>
+                <a href="/logout" class="nav-link mt-1" id="nav-logout" style="color: var(--danger);">
+                    <span class="nav-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <path d="M16 17l5-5-5-5"></path>
+                            <path d="M21 12H9"></path>
+                        </svg>
+                    </span>
+                    Logout
+                </a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    {% endblock %}
+
+    <script src="/static/js/app.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
