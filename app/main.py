@@ -58,6 +58,9 @@ async def session_timeout_middleware(request: Request, call_next):
     return response
 
 
+app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
+
+
 @app.on_event("startup")
 def on_startup():
     """Create tables, apply tiny schema compatibility updates, and seed admin."""
