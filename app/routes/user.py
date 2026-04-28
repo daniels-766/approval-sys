@@ -19,6 +19,29 @@ def require_user(request: Request):
     return user_id
 
 
+def render_user_dashboard(
+    request: Request,
+    db: Session,
+    user_id: int,
+    error: str | None = None,
+    form_data: dict | None = None,
+    show_create_modal: bool = False,
+):
+    """Render the unified dashboard and create-submission experience."""
+    submissions = submission_service.get_submissions_by_user(db, user_id)
+    stats = submission_service.get_user_submission_stats(db, user_id)
+    categories = category_service.get_all_categories(db, active_only=True)
+    return templates.TemplateResponse(request, "user/dashboard.html", {
+        "submissions": submissions,
+        "stats": stats,
+        "categories": categories,
+        "session": request.session,
+        "error": error,
+        "form_data": form_data or {},
+        "show_create_modal": show_create_modal or bool(request.query_params.get("open_create")),
+    })
+
+
 @router.get("/dashboard")
 async def dashboard(request: Request, db: Session = Depends(get_db)):
     """User dashboard showing their submissions."""
@@ -26,30 +49,17 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
     if not user_id:
         return RedirectResponse(url="/login", status_code=302)
 
-    submissions = submission_service.get_submissions_by_user(db, user_id)
-    stats = submission_service.get_user_submission_stats(db, user_id)
-    return templates.TemplateResponse("user/dashboard.html", {
-        "request": request,
-        "submissions": submissions,
-        "stats": stats,
-        "session": request.session,
-    })
+    return render_user_dashboard(request, db, user_id)
 
 
 @router.get("/submission/create")
 async def create_submission_page(request: Request, db: Session = Depends(get_db)):
-    """Render submission creation form."""
+    """Redirect the legacy create page to the dashboard modal."""
     user_id = require_user(request)
     if not user_id:
         return RedirectResponse(url="/login", status_code=302)
 
-    categories = category_service.get_all_categories(db, active_only=True)
-    return templates.TemplateResponse("user/create.html", {
-        "request": request,
-        "categories": categories,
-        "session": request.session,
-        "error": None,
-    })
+    return RedirectResponse(url="/user/dashboard?open_create=1", status_code=302)
 
 
 @router.post("/submission/create")
@@ -68,8 +78,6 @@ async def create_submission(
     if not user_id:
         return RedirectResponse(url="/login", status_code=302)
 
-    categories = category_service.get_all_categories(db, active_only=True)
-
     # Parse nominal — remove commas and spaces
     try:
         clean_nominal = nominal.replace(",", "").replace(" ", "")
@@ -77,12 +85,19 @@ async def create_submission(
         if nominal_value <= 0:
             raise ValueError()
     except (InvalidOperation, ValueError):
-        return templates.TemplateResponse("user/create.html", {
-            "request": request,
-            "categories": categories,
-            "session": request.session,
-            "error": "Invalid nominal value",
-        })
+        return render_user_dashboard(
+            request,
+            db,
+            user_id,
+            error="Invalid nominal value",
+            form_data={
+                "name": name,
+                "purpose": purpose,
+                "nominal": nominal,
+                "category_id": category_id,
+            },
+            show_create_modal=True,
+        )
 
     # Handle file uploads. Keep the old single-file field for backward compatibility.
     doc_path = None
@@ -119,8 +134,7 @@ async def submission_detail(
     if not submission or submission.user_id != user_id:
         return RedirectResponse(url="/user/dashboard", status_code=302)
 
-    return templates.TemplateResponse("user/detail.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "user/detail.html", {
         "submission": submission,
         "categories": category_service.get_all_categories(db, active_only=True),
         "session": request.session,
@@ -155,8 +169,7 @@ async def update_submission_revision(
         if nominal_value <= 0:
             raise ValueError()
     except (InvalidOperation, ValueError):
-        return templates.TemplateResponse("user/detail.html", {
-            "request": request,
+        return templates.TemplateResponse(request, "user/detail.html", {
             "submission": submission,
             "categories": categories,
             "session": request.session,
