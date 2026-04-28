@@ -14,9 +14,11 @@ from app.models.division import Division
 from app.models.submission import Submission, SubmissionAttachment, SubmissionAudit
 from app.models.user import User
 from app.config import settings
+from app.services import notification_service
 
 
 VALID_STATUSES = ("pending", "need_revision", "approved", "rejected")
+# test
 
 
 def _generate_submission_code(db: Session) -> str:
@@ -128,6 +130,16 @@ def create_submission(
     _add_audit(db, submission, "created", None, "pending", actor_id=user_id)
     db.commit()
     db.refresh(submission)
+    
+    # Notify Admins
+    notification_service.notify_all_admins(
+        db,
+        title="New Submission",
+        message=f"{submission.user.full_name} has created a new submission: {submission.name}",
+        link=f"/admin/submission/{submission.id}",
+        type="info"
+    )
+    
     return submission
 
 
@@ -205,6 +217,16 @@ def approve_submission(
     _add_audit(db, submission, "approved", previous_status, "approved", admin_id, notes)
     db.commit()
     db.refresh(submission)
+
+    # Notify User
+    notification_service.create_notification(
+        db,
+        user_id=submission.user_id,
+        title="Submission Approved",
+        message=f"Your submission {submission.submission_code} has been approved.",
+        link=f"/user/submission/{submission.id}",
+        type="success"
+    )
     return submission
 
 
@@ -223,6 +245,16 @@ def reject_submission(
     _add_audit(db, submission, "rejected", previous_status, "rejected", admin_id, notes)
     db.commit()
     db.refresh(submission)
+
+    # Notify User
+    notification_service.create_notification(
+        db,
+        user_id=submission.user_id,
+        title="Submission Rejected",
+        message=f"Your submission {submission.submission_code} has been rejected.",
+        link=f"/user/submission/{submission.id}",
+        type="danger"
+    )
     return submission
 
 
@@ -249,6 +281,16 @@ def request_revision_submission(
     )
     db.commit()
     db.refresh(submission)
+
+    # Notify User
+    notification_service.create_notification(
+        db,
+        user_id=submission.user_id,
+        title="Revision Requested",
+        message=f"Admin requested a revision for {submission.submission_code}.",
+        link=f"/user/submission/{submission.id}",
+        type="warning"
+    )
     return submission
 
 
@@ -295,6 +337,15 @@ def revise_submission(
     )
     db.commit()
     db.refresh(submission)
+
+    # Notify Admins
+    notification_service.notify_all_admins(
+        db,
+        title="Submission Revised",
+        message=f"{submission.user.full_name} has submitted a revision for {submission.submission_code}",
+        link=f"/admin/submission/{submission.id}",
+        type="info"
+    )
     return submission
 
 

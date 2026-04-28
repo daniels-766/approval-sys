@@ -4,7 +4,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.services import submission_service, category_service
+from app.services import submission_service, category_service, notification_service
 
 router = APIRouter(prefix="/user", tags=["user"])
 templates = Jinja2Templates(directory="app/templates")
@@ -31,11 +31,14 @@ def render_user_dashboard(
     submissions = submission_service.get_submissions_by_user(db, user_id)
     stats = submission_service.get_user_submission_stats(db, user_id)
     categories = category_service.get_all_categories(db, active_only=True)
-    return templates.TemplateResponse(request, "user/dashboard.html", {
+    notifications = notification_service.get_unread_notifications(db, user_id)
+    return templates.TemplateResponse("user/dashboard.html", {
+        "request": request,
         "submissions": submissions,
         "stats": stats,
         "categories": categories,
         "session": request.session,
+        "notifications": notifications,
         "error": error,
         "form_data": form_data or {},
         "show_create_modal": show_create_modal or bool(request.query_params.get("open_create")),

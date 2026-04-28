@@ -3,7 +3,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.services import auth_service
+from app.services import auth_service, notification_service
 
 router = APIRouter(tags=["auth"])
 templates = Jinja2Templates(directory="app/templates")
@@ -115,3 +115,17 @@ async def logout(request: Request):
     """Clear session and redirect to login."""
     request.session.clear()
     return RedirectResponse(url="/login", status_code=302)
+
+@router.post("/notifications/{notification_id}/read")
+async def mark_notification_read(
+    notification_id: int,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Mark a notification as read via AJAX."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return {"success": False, "error": "Unauthorized"}
+    
+    success = notification_service.mark_as_read(db, notification_id, user_id)
+    return {"success": success}

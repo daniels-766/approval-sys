@@ -6,9 +6,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
-from app.services import submission_service, category_service
-from app.services import division_service
-from app.services import auth_service
+from app.services import auth_service, category_service, division_service, submission_service, notification_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 templates = Jinja2Templates(directory="app/templates")
@@ -92,6 +90,10 @@ async def admin_dashboard(
         .order_by(User.full_name)
         .all()
     )
+    
+    # Fetch Notifications
+    unread_notifications = notification_service.get_unread_notifications(db, admin_id)
+
     return templates.TemplateResponse("admin/dashboard.html", {
         "request": request,
         "stats": stats,
@@ -99,6 +101,7 @@ async def admin_dashboard(
         "categories": categories,
         "divisions": divisions,
         "users": users,
+        "notifications": unread_notifications,
         "session": request.session,
         "current_filter": status or "all",
         "filters": {
@@ -166,9 +169,13 @@ async def review_submission(
     if not submission:
         return RedirectResponse(url="/admin/dashboard", status_code=302)
 
+    # Notifications
+    notifications = notification_service.get_unread_notifications(db, admin_id)
+
     return templates.TemplateResponse("admin/review.html", {
         "request": request,
         "submission": submission,
+        "notifications": notifications,
         "session": request.session,
     })
 
@@ -258,10 +265,14 @@ async def users_page(
         db, keyword=keyword, role=role, active=active_filter
     )
     divisions = division_service.get_all_divisions(db, active_only=True)
+    # Notifications
+    notifications = notification_service.get_unread_notifications(db, admin_id)
+
     return templates.TemplateResponse("admin/users.html", {
         "request": request,
         "users": users,
         "divisions": divisions,
+        "notifications": notifications,
         "session": request.session,
         "filters": {
             "keyword": keyword or "",
@@ -402,9 +413,13 @@ async def categories_page(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse(url="/login", status_code=302)
 
     categories = category_service.get_all_categories(db)
+    # Notifications
+    notifications = notification_service.get_unread_notifications(db, admin_id)
+
     return templates.TemplateResponse("admin/categories.html", {
         "request": request,
         "categories": categories,
+        "notifications": notifications,
         "session": request.session,
     })
 
@@ -478,10 +493,14 @@ async def divisions_page(request: Request, db: Session = Depends(get_db)):
         .order_by(User.full_name)
         .all()
     )
+    # Notifications
+    notifications = notification_service.get_unread_notifications(db, admin_id)
+
     return templates.TemplateResponse("admin/divisions.html", {
         "request": request,
         "divisions": divisions,
         "users": users,
+        "notifications": notifications,
         "session": request.session,
     })
 
