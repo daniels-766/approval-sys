@@ -1,4 +1,5 @@
 import os
+import time
 
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
@@ -23,6 +24,38 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(auth.router)
 app.include_router(user.router)
 app.include_router(admin.router)
+
+
+@app.middleware("http")
+async def session_timeout_middleware(request: Request, call_next):
+    """Auto logout after 5 minutes of inactivity."""
+    # Skip for login/logout and static files
+    path = request.url.path
+    if path.startswith("/static") or path in ["/login", "/logout", "/register"]:
+        return await call_next(request)
+
+    TIMEOUT_SECONDS = 300  # 5 minutes
+    user_id = request.session.get("user_id")
+
+    if user_id:
+        last_activity = request.session.get("last_activity")
+        current_time = time.time()
+
+        if last_activity:
+            elapsed_time = current_time - float(last_activity)
+            if elapsed_time > TIMEOUT_SECONDS:
+                request.session.clear()
+                # If it's an AJAX request (like the notification read), return 401
+                if "application/json" in request.headers.get("accept", ""):
+                    from fastapi.responses import JSONResponse
+                    return JSONResponse({"detail": "Session expired"}, status_code=401)
+                return RedirectResponse(url="/login?error=Session expired due to inactivity", status_code=302)
+
+        # Update last activity time
+        request.session["last_activity"] = current_time
+
+    response = await call_next(request)
+    return response
 
 
 @app.on_event("startup")

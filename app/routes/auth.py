@@ -10,7 +10,7 @@ templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("/login")
-async def login_page(request: Request):
+async def login_page(request: Request, error: str = None):
     """Render login page."""
     # If already logged in, redirect
     user_id = request.session.get("user_id")
@@ -20,9 +20,10 @@ async def login_page(request: Request):
             return RedirectResponse(url="/admin/dashboard", status_code=302)
         return RedirectResponse(url="/user/dashboard", status_code=302)
 
+    # Use error from query param if context error is None
     return templates.TemplateResponse("auth/login.html", {
         "request": request,
-        "error": None,
+        "error": error,
     })
 
 
