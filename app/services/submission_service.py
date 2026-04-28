@@ -465,3 +465,48 @@ def delete_submission(db: Session, submission_id: int) -> bool:
     db.delete(submission)
     db.commit()
     return True
+def get_visual_stats(db: Session):
+    """Get data for charts: monthly trends and category distribution."""
+    # Monthly Trend (Last 6 months)
+    # Note: SQLite specific date formatting, works for MySQL too if changed to %Y-%m
+    if db.bind.dialect.name == "sqlite":
+        monthly_query = db.query(
+            func.strftime("%Y-%m", Submission.created_at).label("month"),
+            func.count(Submission.id).label("count")
+        ).group_by("month").order_by("month").limit(6).all()
+    else:
+        monthly_query = db.query(
+            func.date_format(Submission.created_at, "%Y-%m").label("month"),
+            func.count(Submission.id).label("count")
+        ).group_by("month").order_by("month").limit(6).all()
+
+    monthly_trend = {
+        "labels": [row.month for row in monthly_query],
+        "values": [row.count for row in monthly_query]
+    }
+
+    # Category Distribution (Top 5 categories by total nominal)
+    category_query = db.query(
+        Category.name,
+        func.sum(Submission.nominal).label("total")
+    ).join(Submission).filter(Submission.status == 'approved').group_by(Category.name).order_by(func.sum(Submission.nominal).desc()).limit(5).all()
+
+    category_dist = {
+        "labels": [row.name for row in category_query],
+        "values": [float(row.total or 0) for row in category_query]
+    }
+
+    return {
+        "monthly_trend": monthly_trend,
+        "category_distribution": category_dist
+    }
+
+def get_submission_stats_for_user(db: Session, user_id: int):
+    """Get submission statistics for a specific user."""
+    return {
+        "total": db.query(Submission).filter(Submission.user_id == user_id).count(),
+        "pending": db.query(Submission).filter(Submission.user_id == user_id, Submission.status == "pending").count(),
+        "need_revision": db.query(Submission).filter(Submission.user_id == user_id, Submission.status == "need_revision").count(),
+        "approved": db.query(Submission).filter(Submission.user_id == user_id, Submission.status == "approved").count(),
+        "rejected": db.query(Submission).filter(Submission.user_id == user_id, Submission.status == "rejected").count(),
+    }

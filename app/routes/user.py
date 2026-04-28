@@ -4,7 +4,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.services import submission_service, category_service, notification_service
+from app.services import submission_service, category_service, notification_service, auth_service
 
 router = APIRouter(prefix="/user", tags=["user"])
 templates = Jinja2Templates(directory="app/templates")
@@ -194,3 +194,62 @@ async def update_submission_revision(
         return RedirectResponse(url=f"/user/submission/{submission_id}", status_code=302)
 
     return RedirectResponse(url=f"/user/submission/{submission_id}?revised=1", status_code=302)
+
+@router.get("/profile")
+async def profile_page(request: Request, db: Session = Depends(get_db)):
+    """Render user profile page."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=302)
+    
+    user = auth_service.get_user_by_id(db, user_id)
+    if not user:
+        return RedirectResponse(url="/logout", status_code=302)
+    
+    # Stats for profile
+    stats = submission_service.get_submission_stats_for_user(db, user_id)
+    notifications = notification_service.get_unread_notifications(db, user_id)
+
+    return templates.TemplateResponse("user/profile.html", {
+        "request": request,
+        "user": user,
+        "stats": stats,
+        "notifications": notifications,
+        "session": request.session,
+    })
+
+@router.post("/profile/update")
+async def update_profile(
+    request: Request,
+    full_name: str = Form(...),
+    email: str = Form(...),
+    current_password: str = Form(None),
+    new_password: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    """Update user profile information."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=302)
+    
+    user = auth_service.get_user_by_id(db, user_id)
+    
+    # Simple profile update
+    user.full_name = full_name.strip()
+    user.email = email.strip()
+    request.session["full_name"] = user.full_name
+    
+    # Password change logic
+    error = None
+    if current_password and new_password:
+        if auth_service.verify_password(current_password, user.password_hash):
+            user.password_hash = auth_service.get_password_hash(new_password)
+        else:
+            error = "Current password incorrect"
+            
+    db.commit()
+    
+    if error:
+        return RedirectResponse(url=f"/user/profile?error={error}", status_code=302)
+        
+    return RedirectResponse(url="/user/profile?updated=1", status_code=302)

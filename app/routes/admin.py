@@ -94,6 +94,9 @@ async def admin_dashboard(
     # Fetch Notifications
     unread_notifications = notification_service.get_unread_notifications(db, admin_id)
 
+    # Fetch Visual Stats (Charts)
+    visual_stats = submission_service.get_visual_stats(db)
+
     return templates.TemplateResponse("admin/dashboard.html", {
         "request": request,
         "stats": stats,
@@ -102,6 +105,7 @@ async def admin_dashboard(
         "divisions": divisions,
         "users": users,
         "notifications": unread_notifications,
+        "visual_stats": visual_stats,
         "session": request.session,
         "current_filter": status or "all",
         "filters": {
@@ -114,6 +118,29 @@ async def admin_dashboard(
             "min_nominal": min_nominal or "",
             "max_nominal": max_nominal or "",
         },
+    })
+
+@router.get("/statistics")
+async def admin_statistics(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Admin statistics page with charts."""
+    admin_id = require_admin(request)
+    if not admin_id:
+        return RedirectResponse(url="/login", status_code=302)
+
+    # Fetch Notifications
+    notifications = notification_service.get_unread_notifications(db, admin_id)
+    
+    # Fetch Visual Stats (Charts)
+    visual_stats = submission_service.get_visual_stats(db)
+
+    return templates.TemplateResponse("admin/statistics.html", {
+        "request": request,
+        "notifications": notifications,
+        "visual_stats": visual_stats,
+        "session": request.session,
     })
 
 

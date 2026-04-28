@@ -131,6 +131,11 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link menu-link" href="/admin/statistics">
+                                <i class="ri-pie-chart-line"></i> <span>Statistics</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link menu-link" href="/admin/categories">
                                 <i class="ri-list-check"></i> <span>Categories</span>
                             </a>
@@ -576,15 +581,15 @@
     <script src="/static/assets/libs/simplebar/simplebar.min.js"></script>
     <script src="/static/assets/libs/node-waves/waves.min.js"></script>
     <script src="/static/assets/libs/feather-icons/feather.min.js"></script>
-    <script src="/static/assets/js/pages/plugins/lord-icon-2.1.0.js"></script>
-    <script src="/static/assets/js/plugins.js"></script>
     <script src="/static/assets/libs/sweetalert2/sweetalert2.min.js"></script>
+    <script src="/static/assets/js/plugins.js"></script>
     <script src="/static/assets/js/app.js"></script>
     <!-- prismjs plugin -->
     <script src="/static/assets/libs/prismjs/prism.js"></script>
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
+            // --- Table Pagination Logic ---
             const tableBody = document.getElementById("submission-list-data");
             const rows = Array.from(tableBody.querySelectorAll("tr"));
             const searchInput = document.getElementById("searchTableList");
