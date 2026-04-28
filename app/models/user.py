@@ -13,9 +13,14 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(100), nullable=False)
     role: Mapped[str] = mapped_column(
-        SAEnum("user", "admin", name="user_role"), default="user", server_default="user"
+        SAEnum("user", "admin", name="user_role"),
+        default="user",
+        server_default="user",
+        index=True,
     )
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="1", index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

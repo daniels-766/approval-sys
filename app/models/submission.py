@@ -10,24 +10,25 @@ class Submission(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     submission_code: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     purpose: Mapped[str] = mapped_column(Text, nullable=False)
     nominal: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
-    category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"), nullable=False)
+    category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"), nullable=False, index=True)
     document_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     document_original_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[str] = mapped_column(
         String(30),
         default="pending",
         server_default="pending",
+        index=True,
     )
     admin_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     reviewed_by: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id"), nullable=True
+        ForeignKey("users.id"), nullable=True, index=True
     )
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
@@ -59,7 +60,7 @@ class SubmissionAttachment(Base):
     __tablename__ = "submission_attachments"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    submission_id: Mapped[int] = mapped_column(ForeignKey("submissions.id"), nullable=False)
+    submission_id: Mapped[int] = mapped_column(ForeignKey("submissions.id"), nullable=False, index=True)
     file_path: Mapped[str] = mapped_column(String(500), nullable=False)
     original_name: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -71,7 +72,7 @@ class SubmissionAudit(Base):
     __tablename__ = "submission_audits"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    submission_id: Mapped[int] = mapped_column(ForeignKey("submissions.id"), nullable=False)
+    submission_id: Mapped[int] = mapped_column(ForeignKey("submissions.id"), nullable=False, index=True)
     actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     action: Mapped[str] = mapped_column(String(50), nullable=False)
     status_from: Mapped[str | None] = mapped_column(String(30), nullable=True)

@@ -1,125 +1,421 @@
-{% extends "base.html" %}
-{% set active_page = 'categories' %}
+<!doctype html>
+<html lang="en" data-layout="vertical" data-topbar="light" data-sidebar="dark" data-sidebar-size="lg" data-sidebar-image="none" data-preloader="disable" data-bs-theme="light">
+<head>
+    <meta charset="utf-8" />
+    <title>Categories | Approval System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta content="Approval System admin categories" name="description" />
+    <meta content="Approval System" name="author" />
+    <link rel="shortcut icon" href="/static/assets/images/favicon.ico">
 
-{% block title %}Categories — Approval System{% endblock %}
+    <!-- Dragula css -->
+    <link rel="stylesheet" href="/static/assets/libs/dragula/dragula.min.css" />
 
-{% block content %}
-<div class="page-header">
-    <h1 class="page-title">Categories</h1>
-    <p class="page-subtitle">Manage submission categories</p>
-</div>
+    <link href="/static/assets/libs/sweetalert2/sweetalert2.min.css" rel="stylesheet" type="text/css" />
+    <script src="/static/assets/js/layout.js"></script>
+    <link href="/static/assets/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="/static/assets/css/icons.min.css" rel="stylesheet" type="text/css" />
+    <link href="/static/assets/css/app.min.css" rel="stylesheet" type="text/css" />
+    <link href="/static/assets/css/custom.min.css" rel="stylesheet" type="text/css" />
+</head>
 
-{% if request.query_params.get('created') %}
-<div class="alert alert-success">✅ Category created successfully!</div>
-{% endif %}
-{% if request.query_params.get('updated') %}
-<div class="alert alert-success">✅ Category updated successfully!</div>
-{% endif %}
-{% if request.query_params.get('error') == 'duplicate' %}
-<div class="alert alert-error">⚠️ Category name already exists!</div>
-{% endif %}
-
-<!-- Add Category -->
-<div class="card mb-3" style="max-width: 600px;">
-    <div class="card-title mb-3">Add New Category</div>
-    <form method="POST" action="/admin/categories" id="add-category-form">
-        <div class="form-group">
-            <label class="form-label" for="name">Category Name *</label>
-            <input type="text" class="form-control" id="name" name="name"
-                   placeholder="e.g. Business Travel" required>
-        </div>
-        <div class="form-group">
-            <label class="form-label" for="description">Description</label>
-            <textarea class="form-control" id="description" name="description" rows="2"
-                      placeholder="Brief description (optional)"></textarea>
-        </div>
-        <button type="submit" class="btn btn-primary" id="btn-add-category">➕ Add Category</button>
-    </form>
-</div>
-
-<!-- Categories List -->
-<div class="card">
-    <div class="card-header">
-        <span class="card-title">All Categories</span>
-    </div>
-
-    {% if categories %}
-    <div class="table-wrapper">
-        <table>
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Name</th>
-                    <th>Description</th>
-                    <th>Status</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for cat in categories %}
-                <tr>
-                    <td>{{ loop.index }}</td>
-                    <td><strong>{{ cat.name }}</strong></td>
-                    <td class="text-muted">{{ cat.description or '-' }}</td>
-                    <td>
-                        {% if cat.is_active %}
-                        <span class="badge badge-active">Active</span>
-                        {% else %}
-                        <span class="badge badge-inactive">Inactive</span>
-                        {% endif %}
-                    </td>
-                    <td class="text-muted">{{ cat.created_at.strftime('%d %b %Y') }}</td>
-                    <td>
-                        <div class="btn-group">
-                            <button class="btn btn-outline btn-sm"
-                                    data-edit-category="{{ cat.id }}"
-                                    data-name="{{ cat.name }}"
-                                    data-description="{{ cat.description or '' }}"
-                                    id="btn-edit-{{ cat.id }}">
-                                ✏️ Edit
-                            </button>
-                            <form method="POST" action="/admin/categories/{{ cat.id }}/toggle" style="display:inline;">
-                                <button type="submit" class="btn btn-sm {% if cat.is_active %}btn-danger{% else %}btn-success{% endif %}"
-                                        data-confirm="Toggle status for '{{ cat.name }}'?"
-                                        id="btn-toggle-{{ cat.id }}">
-                                    {% if cat.is_active %}Deactivate{% else %}Activate{% endif %}
-                                </button>
-                            </form>
+<body>
+    <div id="layout-wrapper">
+        <header id="page-topbar">
+            <div class="layout-width">
+                <div class="navbar-header">
+                    <div class="d-flex">
+                        <div class="navbar-brand-box horizontal-logo">
+                            <a href="/admin/dashboard" class="logo logo-dark">
+                                <span class="logo-sm">
+                                    <img src="/static/assets/images/logo-sm.png" alt="" height="22">
+                                </span>
+                                <span class="logo-lg">
+                                    <img src="/static/assets/images/logo-dark.png" alt="" height="17">
+                                </span>
+                            </a>
+                            <a href="/admin/dashboard" class="logo logo-light">
+                                <span class="logo-sm">
+                                    <img src="/static/assets/images/logo-sm.png" alt="" height="22">
+                                </span>
+                                <span class="logo-lg">
+                                    <img src="/static/assets/images/logo-light.png" alt="" height="17">
+                                </span>
+                            </a>
                         </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="empty-state">
-        <div class="empty-icon">🏷️</div>
-        <h3>No categories yet</h3>
-        <p>Add your first category above</p>
-    </div>
-    {% endif %}
-</div>
 
-<!-- Edit Category Modal -->
-<div class="modal-overlay" id="editCategoryModal">
-    <div class="modal">
-        <div class="modal-title">Edit Category</div>
-        <form method="POST" action="" id="edit-category-form">
-            <div class="form-group">
-                <label class="form-label" for="edit-name">Category Name *</label>
-                <input type="text" class="form-control" id="edit-name" name="name" required>
+                        <button type="button" class="btn btn-sm px-3 fs-16 header-item vertical-menu-btn topnav-hamburger" id="topnav-hamburger-icon">
+                            <span class="hamburger-icon">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </span>
+                        </button>
+                    </div>
+
+                    <div class="d-flex align-items-center">
+                        <div class="ms-1 header-item d-none d-sm-flex">
+                            <button type="button" class="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle light-dark-mode">
+                                <i class='bx bx-moon fs-22'></i>
+                            </button>
+                        </div>
+                        <div class="dropdown ms-sm-3 header-item topbar-user">
+                            <button type="button" class="btn material-shadow-none" id="page-header-user-dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <span class="d-flex align-items-center">
+                                    <span class="avatar-xs flex-shrink-0">
+                                        <span class="avatar-title bg-primary rounded-circle fs-16">
+                                            {{ session.get('full_name', 'A')[0] | upper }}
+                                        </span>
+                                    </span>
+                                    <span class="text-start ms-xl-2">
+                                        <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">{{ session.get('full_name', 'Admin') }}</span>
+                                        <span class="d-none d-xl-block ms-1 fs-12 user-name-sub-text">Administrator</span>
+                                    </span>
+                                </span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end">
+                                <h6 class="dropdown-header">Welcome {{ session.get('full_name', 'Admin') }}!</h6>
+                                <a class="dropdown-item" href="/admin/dashboard"><i class="mdi mdi-view-dashboard text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Dashboard</span></a>
+                                <a class="dropdown-item" href="/logout"><i class="mdi mdi-logout text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Logout</span></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label class="form-label" for="edit-description">Description</label>
-                <textarea class="form-control" id="edit-description" name="description" rows="2"></textarea>
+        </header>
+
+        <div class="app-menu navbar-menu">
+            <div class="navbar-brand-box">
+                <a href="/admin/dashboard" class="logo logo-dark">
+                    <span class="logo-sm">
+                        <img src="/static/assets/images/logo-sm.png" alt="" height="22">
+                    </span>
+                    <span class="logo-lg">
+                        <img src="/static/assets/images/logo-dark.png" alt="" height="17">
+                    </span>
+                </a>
+                <a href="/admin/dashboard" class="logo logo-light">
+                    <span class="logo-sm">
+                        <img src="/static/assets/images/logo-sm.png" alt="" height="22">
+                    </span>
+                    <span class="logo-lg">
+                        <img src="/static/assets/images/logo-light.png" alt="" height="17">
+                    </span>
+                </a>
+                <button type="button" class="btn btn-sm p-0 fs-20 header-item float-end btn-vertical-sm-hover" id="vertical-hover">
+                    <i class="ri-record-circle-line"></i>
+                </button>
             </div>
-            <div class="btn-group">
-                <button type="submit" class="btn btn-primary" id="btn-save-edit">💾 Save Changes</button>
-                <button type="button" class="btn btn-outline" data-modal-close>Cancel</button>
+
+            <div id="scrollbar">
+                <div class="container-fluid">
+                    <div id="two-column-menu"></div>
+                    <ul class="navbar-nav" id="navbar-nav">
+                        <li class="menu-title"><span data-key="t-menu">Menu</span></li>
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="/admin/dashboard">
+                                <i class="ri-dashboard-2-line"></i> <span>Dashboard</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link menu-link active" href="/admin/categories">
+                                <i class="ri-list-check"></i> <span>Categories</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="/admin/divisions">
+                                <i class="ri-building-4-line"></i> <span>Divisions</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="/admin/users">
+                                <i class="ri-user-settings-line"></i> <span>Users Management</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="/logout">
+                                <i class="ri-logout-box-r-line"></i> <span>Logout</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
             </div>
-        </form>
+            <div class="sidebar-background"></div>
+        </div>
+
+        <div class="vertical-overlay"></div>
+
+        <div class="main-content">
+            <div class="page-content">
+                <div class="container-fluid">
+                    <div class="chat-wrapper d-lg-flex gap-1 mx-n4 mt-n4 p-1">
+                        <div class="file-manager-sidebar">
+                            <div class="p-4 d-flex flex-column h-100">
+                                <div class="mb-3">
+                                    <button class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#createCategoryModal"><i class="ri-add-line align-bottom me-1"></i> Add Category</button>
+                                </div>
+
+                                <div class="px-4 mx-n4" data-simplebar style="height: calc(100vh - 468px);">
+                                    <ul class="to-do-menu list-unstyled" id="projectlist-data">
+                                        <li>
+                                            <a href="javascript:void(0);" class="nav-link active">All Categories</a>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div class="mt-auto text-center">
+                                    <img src="/static/assets/images/task.png" alt="" class="img-fluid" />
+                                </div>
+                            </div>
+                        </div><!--end side content-->
+                        <div class="file-manager-content w-100 p-4 pb-0">
+                            <div class="row mb-4">
+                                <div class="col-auto order-1 d-block d-lg-none">
+                                    <button type="button" class="btn btn-soft-success btn-icon btn-sm fs-16 file-menu-btn">
+                                        <i class="ri-menu-2-fill align-bottom"></i>
+                                    </button>
+                                </div>
+                                <div class="col-sm order-3 order-sm-2 mt-3 mt-sm-0">
+                                    <h5 class="fw-semibold mb-0">Manage Categories <span class="badge bg-primary align-middle ms-1">{{ categories|length }}</span></h5>
+                                </div>
+
+                                <div class="col-auto order-2 order-sm-3 ms-auto">
+                                    <div class="hstack gap-2">
+                                        <div class="btn-group" role="group">
+                                            <button id="searchList" type="button" class="btn btn-soft-info btn-icon fs-16"><i class="ri-search-line align-bottom"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-3 bg-light rounded mb-4">
+                                <div class="row g-2">
+                                    <div class="col">
+                                        <div class="search-box">
+                                            <input type="text" id="searchTask" class="form-control search" placeholder="Search categories...">
+                                            <i class="ri-search-line search-icon"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% if request.query_params.get('created') %}
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                <strong>Success!</strong> Category created successfully.
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                            {% endif %}
+                            {% if request.query_params.get('updated') %}
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                <strong>Success!</strong> Category updated successfully.
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                            {% endif %}
+                            {% if request.query_params.get('error') == 'duplicate' %}
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <strong>Error!</strong> Category name already exists.
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                            {% endif %}
+
+                            <div class="todo-content position-relative px-4 mx-n4" id="todo-content">
+                                <div id="elmLoader">
+                                    <div class="spinner-border text-primary avatar-sm" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                                <div class="todo-task" id="todo-task">
+                                    <div class="table-responsive">
+                                        <table class="table align-middle position-relative table-nowrap">
+                                            <thead class="table-active">
+                                                <tr>
+                                                    <th scope="col">Category Name</th>
+                                                    <th scope="col">Description</th>
+                                                    <th scope="col">Status</th>
+                                                    <th scope="col">Created Date</th>
+                                                    <th scope="col">Action</th>
+                                                </tr>
+                                            </thead>
+
+                                            <tbody id="category-list">
+                                                {% for cat in categories %}
+                                                <tr>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="flex-grow-1">
+                                                                <h5 class="fs-14 mb-0 text-truncate"><a href="javascript:void(0);" class="text-body d-block">{{ cat.name }}</a></h5>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-muted">{{ cat.description or '-' }}</td>
+                                                    <td>
+                                                        {% if cat.is_active %}
+                                                        <span class="badge bg-success-subtle text-success text-uppercase">Active</span>
+                                                        {% else %}
+                                                        <span class="badge bg-danger-subtle text-danger text-uppercase">Inactive</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>{{ cat.created_at.strftime('%d %b %Y') }}</td>
+                                                    <td>
+                                                        <div class="hstack gap-2">
+                                                            <button class="btn btn-sm btn-soft-info edit-list" data-bs-toggle="modal" data-bs-target="#editCategoryModal" 
+                                                                    data-id="{{ cat.id }}" data-name="{{ cat.name }}" data-description="{{ cat.description or '' }}">
+                                                                <i class="ri-pencil-fill align-bottom"></i>
+                                                            </button>
+                                                            <form method="POST" action="/admin/categories/{{ cat.id }}/toggle" class="d-inline">
+                                                                <button type="submit" class="btn btn-sm btn-soft-danger remove-list">
+                                                                    <i class="{% if cat.is_active %}ri-close-circle-line{% else %}ri-checkbox-circle-line{% endif %} align-bottom"></i>
+                                                                </button>
+                                                            </form>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="py-4 mt-4 text-center" id="noresult" style="display: none;">
+                                    <lord-icon src="https://cdn.lordicon.com/msoeawqm.json" trigger="loop" colors="primary:#405189,secondary:#0ab39c" style="width:72px;height:72px"></lord-icon>
+                                    <h5 class="mt-4">Sorry! No Result Found</h5>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="footer">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            Approval System
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-sm-end d-none d-sm-block">
+                                Admin workspace
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </div>
     </div>
-</div>
-{% endblock %}
+
+    <!-- Create Modal -->
+    <div class="modal fade" id="createCategoryModal" tabindex="-1" aria-labelledby="createCategoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0">
+                <div class="modal-header p-3 bg-success-subtle">
+                    <h5 class="modal-title" id="createCategoryModalLabel">Add New Category</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" id="createTaskBtn-close" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="/admin/categories">
+                        <div class="mb-3">
+                            <label for="cat-name" class="form-label">Category Name *</label>
+                            <input type="text" id="cat-name" name="name" class="form-control" placeholder="Enter category name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="cat-description" class="form-label">Description</label>
+                            <textarea id="cat-description" name="description" class="form-control" rows="3" placeholder="Enter description"></textarea>
+                        </div>
+                        <div class="hstack gap-2 justify-content-end">
+                            <button type="button" class="btn btn-ghost-success" data-bs-dismiss="modal"><i class="ri-close-fill align-bottom"></i> Close</button>
+                            <button type="submit" class="btn btn-success" id="addNewTodo">Add Category</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal fade" id="editCategoryModal" tabindex="-1" aria-labelledby="editCategoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0">
+                <div class="modal-header p-3 bg-info-subtle">
+                    <h5 class="modal-title" id="editCategoryModalLabel">Edit Category</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="" id="edit-category-form">
+                        <div class="mb-3">
+                            <label for="edit-cat-name" class="form-label">Category Name *</label>
+                            <input type="text" id="edit-cat-name" name="name" class="form-control" placeholder="Enter category name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-cat-description" class="form-label">Description</label>
+                            <textarea id="edit-cat-description" name="description" class="form-control" rows="3" placeholder="Enter description"></textarea>
+                        </div>
+                        <div class="hstack gap-2 justify-content-end">
+                            <button type="button" class="btn btn-ghost-info" data-bs-dismiss="modal"><i class="ri-close-fill align-bottom"></i> Close</button>
+                            <button type="submit" class="btn btn-info">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/assets/libs/simplebar/simplebar.min.js"></script>
+    <script src="/static/assets/libs/node-waves/waves.min.js"></script>
+    <script src="/static/assets/libs/feather-icons/feather.min.js"></script>
+    <script src="/static/assets/js/pages/plugins/lord-icon-2.1.0.js"></script>
+    <script src="/static/assets/js/plugins.js"></script>
+    <script src="/static/assets/libs/dragula/dragula.min.js"></script>
+    <script src="/static/assets/libs/sweetalert2/sweetalert2.min.js"></script>
+    <script src="/static/assets/js/app.js"></script>
+
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Handle Loader
+        setTimeout(function() {
+            document.getElementById('elmLoader').style.display = 'none';
+        }, 500);
+
+        // Edit Modal Data
+        const editButtons = document.querySelectorAll('.edit-list');
+        const editForm = document.getElementById('edit-category-form');
+        const editNameInput = document.getElementById('edit-cat-name');
+        const editDescInput = document.getElementById('edit-cat-description');
+
+        editButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const name = this.getAttribute('data-name');
+                const desc = this.getAttribute('data-description');
+
+                editForm.action = `/admin/categories/${id}/update`;
+                editNameInput.value = name;
+                editDescInput.value = desc;
+            });
+        });
+
+        // Simple Search
+        const searchInput = document.getElementById('searchTask');
+        const rows = document.querySelectorAll('#category-list tr');
+        const noResult = document.getElementById('noresult');
+
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            let count = 0;
+
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                if(text.includes(query)) {
+                    row.style.display = '';
+                    count++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            noResult.style.display = count === 0 ? 'block' : 'none';
+        });
+    });
+    </script>
+</body>
+</html>

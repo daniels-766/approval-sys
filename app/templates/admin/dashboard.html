@@ -1,188 +1,714 @@
-{% extends "base.html" %}
-{% set active_page = 'dashboard' %}
+<!doctype html>
+<html lang="en" data-layout="vertical" data-topbar="light" data-sidebar="dark" data-sidebar-size="lg"
+    data-sidebar-image="none" data-preloader="disable" data-bs-theme="light">
 
-{% block title %}Admin Dashboard - Approval System{% endblock %}
+<head>
+    <meta charset="utf-8" />
+    <title>Admin Dashboard | Approval System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta content="Approval System admin dashboard" name="description" />
+    <meta content="Approval System" name="author" />
+    <link rel="shortcut icon" href="/static/assets/images/favicon.ico">
 
-{% block content %}
-<div class="page-header">
-    <h1 class="page-title">Dashboard</h1>
-    <p class="page-subtitle">Overview of all submissions</p>
-</div>
+    <link href="/static/assets/libs/sweetalert2/sweetalert2.min.css" rel="stylesheet" type="text/css" />
+    <script src="/static/assets/js/layout.js"></script>
+    <link href="/static/assets/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="/static/assets/css/icons.min.css" rel="stylesheet" type="text/css" />
+    <link href="/static/assets/css/app.min.css" rel="stylesheet" type="text/css" />
+    <link href="/static/assets/css/custom.min.css" rel="stylesheet" type="text/css" />
+</head>
 
-{% if request.query_params.get('approved') %}
-<div class="alert alert-success">Submission approved successfully!</div>
-{% endif %}
-{% if request.query_params.get('rejected') %}
-<div class="alert alert-warning">Submission rejected.</div>
-{% endif %}
-{% if request.query_params.get('revision') %}
-<div class="alert alert-warning">Revision requested.</div>
-{% endif %}
+<body>
+    <div id="layout-wrapper">
+        <header id="page-topbar">
+            <div class="layout-width">
+                <div class="navbar-header">
+                    <div class="d-flex">
+                        <div class="navbar-brand-box horizontal-logo">
+                            <a href="/admin/dashboard" class="logo logo-dark">
+                                <span class="logo-sm">
+                                    <img src="/static/assets/images/logo-sm.png" alt="" height="22">
+                                </span>
+                                <span class="logo-lg">
+                                    <img src="/static/assets/images/logo-dark.png" alt="" height="17">
+                                </span>
+                            </a>
+                            <a href="/admin/dashboard" class="logo logo-light">
+                                <span class="logo-sm">
+                                    <img src="/static/assets/images/logo-sm.png" alt="" height="22">
+                                </span>
+                                <span class="logo-lg">
+                                    <img src="/static/assets/images/logo-light.png" alt="" height="17">
+                                </span>
+                            </a>
+                        </div>
 
-<div class="stats-grid">
-    <div class="stat-card total">
-        <div class="stat-value">{{ stats.total }}</div>
-        <div class="stat-label">Total Submissions</div>
-    </div>
-    <div class="stat-card pending">
-        <div class="stat-value">{{ stats.pending }}</div>
-        <div class="stat-label">Pending Review</div>
-    </div>
-    <div class="stat-card revision">
-        <div class="stat-value">{{ stats.need_revision }}</div>
-        <div class="stat-label">Need Revision</div>
-    </div>
-    <div class="stat-card approved">
-        <div class="stat-value">{{ stats.approved }}</div>
-        <div class="stat-label">Approved</div>
-    </div>
-    <div class="stat-card rejected">
-        <div class="stat-value">{{ stats.rejected }}</div>
-        <div class="stat-label">Rejected</div>
-    </div>
-</div>
+                        <button type="button"
+                            class="btn btn-sm px-3 fs-16 header-item vertical-menu-btn topnav-hamburger"
+                            id="topnav-hamburger-icon">
+                            <span class="hamburger-icon">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </span>
+                        </button>
+                    </div>
 
-<div class="filter-tabs">
-    <a href="/admin/dashboard" class="filter-tab {% if current_filter == 'all' %}active{% endif %}">All</a>
-    <a href="/admin/dashboard?status=pending" class="filter-tab {% if current_filter == 'pending' %}active{% endif %}">Pending</a>
-    <a href="/admin/dashboard?status=need_revision" class="filter-tab {% if current_filter == 'need_revision' %}active{% endif %}">Need Revision</a>
-    <a href="/admin/dashboard?status=approved" class="filter-tab {% if current_filter == 'approved' %}active{% endif %}">Approved</a>
-    <a href="/admin/dashboard?status=rejected" class="filter-tab {% if current_filter == 'rejected' %}active{% endif %}">Rejected</a>
-</div>
+                    <div class="d-flex align-items-center">
+                        <div class="ms-1 header-item d-none d-sm-flex">
+                            <button type="button"
+                                class="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle light-dark-mode">
+                                <i class='bx bx-moon fs-22'></i>
+                            </button>
+                        </div>
+                        <div class="dropdown ms-sm-3 header-item topbar-user">
+                            <button type="button" class="btn material-shadow-none" id="page-header-user-dropdown"
+                                data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <span class="d-flex align-items-center">
+                                    <span class="avatar-xs flex-shrink-0">
+                                        <span class="avatar-title bg-primary rounded-circle fs-16">
+                                            {{ session.get('full_name', 'A')[0] | upper }}
+                                        </span>
+                                    </span>
+                                    <span class="text-start ms-xl-2">
+                                        <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">{{
+                                            session.get('full_name', 'Admin') }}</span>
+                                        <span
+                                            class="d-none d-xl-block ms-1 fs-12 user-name-sub-text">Administrator</span>
+                                    </span>
+                                </span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end">
+                                <h6 class="dropdown-header">Welcome {{ session.get('full_name', 'Admin') }}!</h6>
+                                <a class="dropdown-item" href="/admin/dashboard"><i
+                                        class="mdi mdi-view-dashboard text-muted fs-16 align-middle me-1"></i> <span
+                                        class="align-middle">Dashboard</span></a>
+                                <a class="dropdown-item" href="/logout"><i
+                                        class="mdi mdi-logout text-muted fs-16 align-middle me-1"></i> <span
+                                        class="align-middle">Logout</span></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
 
-<div class="card mb-3">
-    <div class="card-title mb-3">Search and Filter</div>
-    <form method="GET" action="/admin/dashboard" class="filter-form">
-        <div class="filter-grid">
-            <div class="form-group">
-                <label class="form-label" for="keyword">Keyword</label>
-                <input class="form-control" id="keyword" name="keyword" value="{{ filters.keyword }}"
-                       placeholder="Code, name, purpose, user">
+        <div class="app-menu navbar-menu">
+            <div class="navbar-brand-box">
+                <a href="/admin/dashboard" class="logo logo-dark">
+                    <span class="logo-sm">
+                        <img src="/static/assets/images/logo-sm.png" alt="" height="22">
+                    </span>
+                    <span class="logo-lg">
+                        <img src="/static/assets/images/logo-dark.png" alt="" height="17">
+                    </span>
+                </a>
+                <a href="/admin/dashboard" class="logo logo-light">
+                    <span class="logo-sm">
+                        <img src="/static/assets/images/logo-sm.png" alt="" height="22">
+                    </span>
+                    <span class="logo-lg">
+                        <img src="/static/assets/images/logo-light.png" alt="" height="17">
+                    </span>
+                </a>
+                <button type="button" class="btn btn-sm p-0 fs-20 header-item float-end btn-vertical-sm-hover"
+                    id="vertical-hover">
+                    <i class="ri-record-circle-line"></i>
+                </button>
             </div>
-            <div class="form-group">
-                <label class="form-label" for="status">Status</label>
-                <select class="form-control" id="status" name="status">
-                    <option value="">All</option>
-                    <option value="pending" {% if current_filter == 'pending' %}selected{% endif %}>Pending</option>
-                    <option value="need_revision" {% if current_filter == 'need_revision' %}selected{% endif %}>Need Revision</option>
-                    <option value="approved" {% if current_filter == 'approved' %}selected{% endif %}>Approved</option>
-                    <option value="rejected" {% if current_filter == 'rejected' %}selected{% endif %}>Rejected</option>
-                </select>
+
+            <div id="scrollbar">
+                <div class="container-fluid">
+                    <div id="two-column-menu"></div>
+                    <ul class="navbar-nav" id="navbar-nav">
+                        <li class="menu-title"><span data-key="t-menu">Menu</span></li>
+                        <li class="nav-item">
+                            <a class="nav-link menu-link active" href="/admin/dashboard">
+                                <i class="ri-dashboard-2-line"></i> <span>Dashboard</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="/admin/categories">
+                                <i class="ri-list-check"></i> <span>Categories</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="/admin/divisions">
+                                <i class="ri-building-4-line"></i> <span>Divisions</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="/admin/users">
+                                <i class="ri-user-settings-line"></i> <span>Users Management</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="/logout">
+                                <i class="ri-logout-box-r-line"></i> <span>Logout</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
             </div>
-            <div class="form-group">
-                <label class="form-label" for="category_id">Category</label>
-                <select class="form-control" id="category_id" name="category_id">
-                    <option value="">All</option>
-                    {% for category in categories %}
-                    <option value="{{ category.id }}" {% if filters.category_id == category.id %}selected{% endif %}>{{ category.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="division_id">Division</label>
-                <select class="form-control" id="division_id" name="division_id">
-                    <option value="">All</option>
-                    {% for division in divisions %}
-                    <option value="{{ division.id }}" {% if filters.division_id == division.id %}selected{% endif %}>{{ division.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="user_id">User</label>
-                <select class="form-control" id="user_id" name="user_id">
-                    <option value="">All</option>
-                    {% for user in users %}
-                    <option value="{{ user.id }}" {% if filters.user_id == user.id %}selected{% endif %}>{{ user.full_name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="date_from">From</label>
-                <input class="form-control" type="date" id="date_from" name="date_from" value="{{ filters.date_from }}">
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="date_to">To</label>
-                <input class="form-control" type="date" id="date_to" name="date_to" value="{{ filters.date_to }}">
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="min_nominal">Min Nominal</label>
-                <input class="form-control" id="min_nominal" name="min_nominal" value="{{ filters.min_nominal }}">
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="max_nominal">Max Nominal</label>
-                <input class="form-control" id="max_nominal" name="max_nominal" value="{{ filters.max_nominal }}">
-            </div>
+            <div class="sidebar-background"></div>
         </div>
-        <div class="btn-group">
-            <button type="submit" class="btn btn-primary">Apply</button>
-            <a href="/admin/dashboard" class="btn btn-outline">Reset</a>
-            <a href="/admin/dashboard/export{% if request.url.query %}?{{ request.url.query }}{% endif %}" class="btn btn-success">Export CSV</a>
+
+        <div class="vertical-overlay"></div>
+
+        <div class="main-content">
+            <div class="page-content">
+                <div class="container-fluid">
+                    <!-- start page title -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+                                <h4 class="mb-sm-0">Admin Dashboard</h4>
+                                <div class="page-title-right">
+                                    <ol class="breadcrumb m-0">
+                                        <li class="breadcrumb-item"><a href="/admin/dashboard">Admin</a></li>
+                                        <li class="breadcrumb-item active">Dashboard</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- end page title -->
+
+                    {% if request.query_params.get('approved') %}
+                    <div class="alert alert-success alert-border-left alert-dismissible fade show" role="alert">
+                        <i class="ri-checkbox-circle-line me-3 align-middle fs-16"></i>Submission approved successfully!
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endif %}
+                    {% if request.query_params.get('rejected') %}
+                    <div class="alert alert-danger alert-border-left alert-dismissible fade show" role="alert">
+                        <i class="ri-close-circle-line me-3 align-middle fs-16"></i>Submission rejected.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endif %}
+                    {% if request.query_params.get('revision') %}
+                    <div class="alert alert-warning alert-border-left alert-dismissible fade show" role="alert">
+                        <i class="ri-error-warning-line me-3 align-middle fs-16"></i>Revision requested.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endif %}
+                    {% if request.query_params.get('deleted') %}
+                    <div class="alert alert-danger alert-border-left alert-dismissible fade show" role="alert">
+                        <i class="ri-delete-bin-line me-3 align-middle fs-16"></i>Submission deleted successfully.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endif %}
+
+                    <!-- Stats Grid -->
+                    <div class="row">
+                        <div class="col-xxl-3 col-sm-6">
+                            <div class="card card-animate">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <p class="fw-medium text-muted mb-0">Total Submissions</p>
+                                            <h2 class="mt-4 ff-secondary fw-semibold"><span class="counter-value"
+                                                    data-target="{{ stats.total }}">{{ stats.total }}</span></h2>
+                                        </div>
+                                        <div>
+                                            <div class="avatar-sm flex-shrink-0">
+                                                <span
+                                                    class="avatar-title bg-primary-subtle text-primary rounded-circle fs-4">
+                                                    <i class="ri-file-list-3-line"></i>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xxl-2 col-sm-6">
+                            <div class="card card-animate">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <p class="fw-medium text-muted mb-0">Pending</p>
+                                            <h2 class="mt-4 ff-secondary fw-semibold"><span class="counter-value"
+                                                    data-target="{{ stats.pending }}">{{ stats.pending }}</span></h2>
+                                        </div>
+                                        <div>
+                                            <div class="avatar-sm flex-shrink-0">
+                                                <span
+                                                    class="avatar-title bg-warning-subtle text-warning rounded-circle fs-4">
+                                                    <i class="ri-time-line"></i>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xxl-2 col-sm-6">
+                            <div class="card card-animate">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <p class="fw-medium text-muted mb-0">Revision</p>
+                                            <h2 class="mt-4 ff-secondary fw-semibold"><span class="counter-value"
+                                                    data-target="{{ stats.need_revision }}">{{ stats.need_revision
+                                                    }}</span></h2>
+                                        </div>
+                                        <div>
+                                            <div class="avatar-sm flex-shrink-0">
+                                                <span class="avatar-title bg-info-subtle text-info rounded-circle fs-4">
+                                                    <i class="ri-edit-2-line"></i>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xxl-2 col-sm-6">
+                            <div class="card card-animate">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <p class="fw-medium text-muted mb-0">Approved</p>
+                                            <h2 class="mt-4 ff-secondary fw-semibold"><span class="counter-value"
+                                                    data-target="{{ stats.approved }}">{{ stats.approved }}</span></h2>
+                                        </div>
+                                        <div>
+                                            <div class="avatar-sm flex-shrink-0">
+                                                <span
+                                                    class="avatar-title bg-success-subtle text-success rounded-circle fs-4">
+                                                    <i class="ri-checkbox-circle-line"></i>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xxl-3 col-sm-6">
+                            <div class="card card-animate">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <p class="fw-medium text-muted mb-0">Rejected</p>
+                                            <h2 class="mt-4 ff-secondary fw-semibold"><span class="counter-value"
+                                                    data-target="{{ stats.rejected }}">{{ stats.rejected }}</span></h2>
+                                        </div>
+                                        <div>
+                                            <div class="avatar-sm flex-shrink-0">
+                                                <span
+                                                    class="avatar-title bg-danger-subtle text-danger rounded-circle fs-4">
+                                                    <i class="ri-close-circle-line"></i>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="card" id="submissionList">
+                                <div class="card-header border-0">
+                                    <div class="row align-items-center gy-3">
+                                        <div class="col-sm">
+                                            <h5 class="card-title mb-0">Submissions</h5>
+                                        </div>
+                                        <div class="col-sm-auto">
+                                            <div class="d-flex gap-1 flex-wrap">
+                                                <a href="/admin/dashboard/export{% if request.url.query %}?{{ request.url.query }}{% endif %}"
+                                                    class="btn btn-success"><i
+                                                        class="ri-file-download-line align-bottom me-1"></i> Export
+                                                    CSV</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body border border-dashed border-end-0 border-start-0">
+                                    <form method="GET" action="/admin/dashboard">
+                                        <input type="hidden" name="status" value="{{ current_filter }}">
+                                        <div class="row g-3">
+                                            <div class="col-xxl-3 col-sm-6">
+                                                <div class="search-box">
+                                                    <input type="text" class="form-control search" name="keyword"
+                                                        value="{{ filters.keyword }}"
+                                                        placeholder="Keyword (Code, name, purpose, user)...">
+                                                    <i class="ri-search-line search-icon"></i>
+                                                </div>
+                                            </div>
+                                            <div class="col-xxl-2 col-sm-6">
+                                                <select class="form-control" data-choices data-choices-search-false
+                                                    name="category_id">
+                                                    <option value="">All Categories</option>
+                                                    {% for category in categories %}
+                                                    <option value="{{ category.id }}" {% if
+                                                        filters.category_id==category.id %}selected{% endif %}>{{
+                                                        category.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-xxl-2 col-sm-6">
+                                                <select class="form-control" data-choices data-choices-search-false
+                                                    name="division_id">
+                                                    <option value="">All Divisions</option>
+                                                    {% for division in divisions %}
+                                                    <option value="{{ division.id }}" {% if
+                                                        filters.division_id==division.id %}selected{% endif %}>{{
+                                                        division.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-xxl-2 col-sm-6">
+                                                <select class="form-control" data-choices name="user_id">
+                                                    <option value="">All Users</option>
+                                                    {% for user in users %}
+                                                    <option value="{{ user.id }}" {% if filters.user_id==user.id
+                                                        %}selected{% endif %}>{{ user.full_name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-xxl-3 col-sm-6 d-flex gap-2">
+                                                <button type="submit" class="btn btn-primary w-100"> <i
+                                                        class="ri-equalizer-fill me-1 align-bottom"></i>
+                                                    Filters</button>
+                                                <a href="/admin/dashboard"
+                                                    class="btn btn-soft-secondary w-100">Reset</a>
+                                            </div>
+                                        </div>
+
+                                        <div class="row g-3 mt-1">
+                                            <div class="col-xxl-3 col-sm-6">
+                                                <div>
+                                                    <input type="date" class="form-control" name="date_from"
+                                                        value="{{ filters.date_from }}" placeholder="Date From">
+                                                </div>
+                                            </div>
+                                            <div class="col-xxl-3 col-sm-6">
+                                                <div>
+                                                    <input type="date" class="form-control" name="date_to"
+                                                        value="{{ filters.date_to }}" placeholder="Date To">
+                                                </div>
+                                            </div>
+                                            <div class="col-xxl-3 col-sm-6">
+                                                <input type="number" class="form-control" name="min_nominal"
+                                                    value="{{ filters.min_nominal }}" placeholder="Min Nominal">
+                                            </div>
+                                            <div class="col-xxl-3 col-sm-6">
+                                                <input type="number" class="form-control" name="max_nominal"
+                                                    value="{{ filters.max_nominal }}" placeholder="Max Nominal">
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+
+                                <div class="card-body pt-0">
+                                    <div>
+                                        <ul class="nav nav-tabs nav-tabs-custom nav-success mb-3" role="tablist">
+                                            <li class="nav-item">
+                                                <a class="nav-link py-3 {% if current_filter == 'all' %}active{% endif %}"
+                                                    href="/admin/dashboard" role="tab">
+                                                    <i class="ri-store-2-fill me-1 align-bottom"></i> All
+                                                </a>
+                                            </li>
+                                            <li class="nav-item">
+                                                <a class="nav-link py-3 {% if current_filter == 'pending' %}active{% endif %}"
+                                                    href="/admin/dashboard?status=pending" role="tab">
+                                                    <i class="ri-time-line me-1 align-bottom"></i> Pending
+                                                </a>
+                                            </li>
+                                            <li class="nav-item">
+                                                <a class="nav-link py-3 {% if current_filter == 'need_revision' %}active{% endif %}"
+                                                    href="/admin/dashboard?status=need_revision" role="tab">
+                                                    <i class="ri-edit-2-line me-1 align-bottom"></i> Need Revision
+                                                </a>
+                                            </li>
+                                            <li class="nav-item">
+                                                <a class="nav-link py-3 {% if current_filter == 'approved' %}active{% endif %}"
+                                                    href="/admin/dashboard?status=approved" role="tab">
+                                                    <i class="ri-checkbox-circle-line me-1 align-bottom"></i> Approved
+                                                </a>
+                                            </li>
+                                            <li class="nav-item">
+                                                <a class="nav-link py-3 {% if current_filter == 'rejected' %}active{% endif %}"
+                                                    href="/admin/dashboard?status=rejected" role="tab">
+                                                    <i class="ri-close-circle-line me-1 align-bottom"></i> Rejected
+                                                </a>
+                                            </li>
+                                        </ul>
+
+                                        <!-- Client-side filter -->
+                                        <div class="row mb-3">
+                                            <div class="col-md-4">
+                                                <div class="search-box">
+                                                    <input type="text" class="form-control search" id="searchTableList"
+                                                        placeholder="Search in table...">
+                                                    <i class="ri-search-line search-icon"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="table-responsive table-card mb-1">
+                                            <table class="table table-nowrap align-middle" id="submissionTable">
+                                                <thead class="text-muted table-light">
+                                                    <tr class="text-uppercase">
+                                                        <th class="sort" data-sort="code">Code</th>
+                                                        <th class="sort" data-sort="user">Submitted By</th>
+                                                        <th class="sort" data-sort="name">Name</th>
+                                                        <th class="sort" data-sort="category">Category</th>
+                                                        <th class="sort" data-sort="nominal">Nominal</th>
+                                                        <th class="sort" data-sort="status">Status</th>
+                                                        <th class="sort" data-sort="date">Date</th>
+                                                        <th>Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="list form-check-all" id="submission-list-data">
+                                                    {% for sub in submissions %}
+                                                    <tr>
+                                                        <td class="code"><a href="/admin/submission/{{ sub.id }}"
+                                                                class="fw-medium link-primary">{{ sub.submission_code
+                                                                }}</a></td>
+                                                        <td class="user">{{ sub.user.full_name }}</td>
+                                                        <td class="name">{{ sub.name }}</td>
+                                                        <td class="category">{{ sub.category.name }}</td>
+                                                        <td class="nominal">₹ {{ "{:,.2f}".format(sub.nominal) }}</td>
+                                                        <td class="status">
+                                                            {% set status_class = 'bg-warning-subtle text-warning' %}
+                                                            {% if sub.status == 'approved' %}{% set status_class =
+                                                            'bg-success-subtle text-success' %}{% endif %}
+                                                            {% if sub.status == 'rejected' %}{% set status_class =
+                                                            'bg-danger-subtle text-danger' %}{% endif %}
+                                                            {% if sub.status == 'need_revision' %}{% set status_class =
+                                                            'bg-info-subtle text-info' %}{% endif %}
+                                                            <span class="badge {{ status_class }} text-uppercase">
+                                                                {% if sub.status == 'need_revision' %}Need Revision{%
+                                                                else %}{{ sub.status }}{% endif %}
+                                                            </span>
+                                                        </td>
+                                                        <td class="date">{{ sub.created_at.strftime('%d %b %Y') }}</td>
+                                                        <td>
+                                                            <ul class="list-inline hstack gap-2 mb-0">
+                                                                <li class="list-inline-item" data-bs-toggle="tooltip"
+                                                                    data-bs-trigger="hover" data-bs-placement="top"
+                                                                    title="{% if sub.status in ['pending', 'need_revision'] %}Review{% else %}View{% endif %}">
+                                                                    <a href="/admin/submission/{{ sub.id }}"
+                                                                        class="text-primary d-inline-block">
+                                                                        <i class="ri-eye-fill fs-16"></i>
+                                                                    </a>
+                                                                </li>
+                                                                <li class="list-inline-item" data-bs-toggle="tooltip"
+                                                                    data-bs-trigger="hover" data-bs-placement="top"
+                                                                    title="Delete">
+                                                                    <form action="/admin/submission/{{ sub.id }}/delete" method="POST" onsubmit="return confirmDelete(event, this);">
+                                                                        <button type="submit" class="btn text-danger p-0 border-0 bg-transparent">
+                                                                            <i class="ri-delete-bin-fill fs-16"></i>
+                                                                        </button>
+                                                                    </form>
+                                                                </li>
+                                                            </ul>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+
+                                            <div class="noresult" id="noresult" {% if submissions
+                                                %}style="display: none" {% endif %}>
+                                                <div class="text-center pb-4 pt-4">
+                                                    <lord-icon src="https://cdn.lordicon.com/msoeawqm.json"
+                                                        trigger="loop" colors="primary:#405189,secondary:#0ab39c"
+                                                        style="width:75px;height:75px"></lord-icon>
+                                                    <h5 class="mt-2">Sorry! No Result Found</h5>
+                                                    <p class="text-muted mb-0">There are no submissions matching your
+                                                        filter criteria.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <div class="text-muted">
+                                                Showing <span id="showing-entries">0</span> of <span
+                                                    id="total-entries">0</span> entries
+                                            </div>
+                                            <div class="pagination-wrap hstack gap-2">
+                                                <button class="page-item pagination-prev" id="page-prev" disabled>
+                                                    Previous
+                                                </button>
+                                                <ul class="pagination listjs-pagination mb-0" id="pagination-pages">
+                                                </ul>
+                                                <button class="page-item pagination-next" id="page-next">
+                                                    Next
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <footer class="footer">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            Approval System
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-sm-end d-none d-sm-block">
+                                Admin workspace
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </footer>
         </div>
-    </form>
-</div>
-
-<div class="card">
-    <div class="card-header">
-        <span class="card-title">Submissions</span>
     </div>
 
-    {% if submissions %}
-    <div class="table-wrapper">
-        <table>
-            <thead>
-                <tr>
-                    <th>Code</th>
-                    <th>Submitted By</th>
-                    <th>Name</th>
-                    <th>Category</th>
-                    <th>Nominal</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for sub in submissions %}
-                <tr>
-                    <td><strong>{{ sub.submission_code }}</strong></td>
-                    <td>{{ sub.user.full_name }}</td>
-                    <td>{{ sub.name }}</td>
-                    <td>{{ sub.category.name }}</td>
-                    <td class="nominal-value">₹ {{ "{:,.2f}".format(sub.nominal) }}</td>
-                    <td>
-                        <span class="badge badge-{{ sub.status }}">
-                            {% if sub.status == 'need_revision' %}Need Revision{% else %}{{ sub.status | capitalize }}{% endif %}
-                        </span>
-                    </td>
-                    <td class="text-muted">{{ sub.created_at.strftime('%d %b %Y') }}</td>
-                    <td>
-                        <a href="/admin/submission/{{ sub.id }}" class="btn btn-outline btn-sm">
-                            {% if sub.status in ['pending', 'need_revision'] %}Review{% else %}View{% endif %}
-                        </a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="empty-state">
-        <div class="empty-icon">-</div>
-        <h3>No submissions found</h3>
-        <p>There are no submissions matching your filter</p>
-    </div>
-    {% endif %}
-</div>
+    <script src="/static/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/assets/libs/simplebar/simplebar.min.js"></script>
+    <script src="/static/assets/libs/node-waves/waves.min.js"></script>
+    <script src="/static/assets/libs/feather-icons/feather.min.js"></script>
+    <script src="/static/assets/js/pages/plugins/lord-icon-2.1.0.js"></script>
+    <script src="/static/assets/js/plugins.js"></script>
+    <script src="/static/assets/libs/sweetalert2/sweetalert2.min.js"></script>
+    <script src="/static/assets/js/app.js"></script>
+    <!-- prismjs plugin -->
+    <script src="/static/assets/libs/prismjs/prism.js"></script>
 
-<style>
-.filter-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 16px;
-}
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const tableBody = document.getElementById("submission-list-data");
+            const rows = Array.from(tableBody.querySelectorAll("tr"));
+            const searchInput = document.getElementById("searchTableList");
+            const prevBtn = document.getElementById("page-prev");
+            const nextBtn = document.getElementById("page-next");
+            const paginationPages = document.getElementById("pagination-pages");
+            const showingEntriesLabel = document.getElementById("showing-entries");
+            const totalEntriesLabel = document.getElementById("total-entries");
+            const noResult = document.getElementById("noresult");
 
-.stat-card.revision::before {
-    background: linear-gradient(90deg, #3b82f6, #60a5fa);
-}
-</style>
-{% endblock %}
+            const rowsPerPage = 10;
+            let currentPage = 1;
+            let filteredRows = [...rows];
+
+            function renderTable() {
+                const totalRows = filteredRows.length;
+                const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
+
+                // Hide all rows first
+                rows.forEach(row => row.style.display = "none");
+
+                if (totalRows === 0) {
+                    noResult.style.display = "block";
+                    showingEntriesLabel.textContent = "0";
+                    totalEntriesLabel.textContent = "0";
+                    paginationPages.innerHTML = "";
+                    prevBtn.disabled = true;
+                    nextBtn.disabled = true;
+                    return;
+                }
+
+                noResult.style.display = "none";
+
+                // Adjust currentPage if it exceeds totalPages
+                if (currentPage > totalPages) currentPage = totalPages;
+                if (currentPage < 1) currentPage = 1;
+
+                const startIndex = (currentPage - 1) * rowsPerPage;
+                const endIndex = Math.min(startIndex + rowsPerPage, totalRows);
+
+                // Show rows for current page
+                for (let i = startIndex; i < endIndex; i++) {
+                    filteredRows[i].style.display = "";
+                }
+
+                showingEntriesLabel.textContent = `${startIndex + 1} to ${endIndex}`;
+                totalEntriesLabel.textContent = totalRows;
+
+                renderPagination(totalPages);
+            }
+
+            function renderPagination(totalPages) {
+                paginationPages.innerHTML = "";
+
+                prevBtn.disabled = currentPage === 1;
+                nextBtn.disabled = currentPage === totalPages;
+
+                for (let i = 1; i <= totalPages; i++) {
+                    const li = document.createElement("li");
+                    li.className = `page-item ${i === currentPage ? "active" : ""}`;
+                    const a = document.createElement("a");
+                    a.className = "page-link";
+                    a.href = "#";
+                    a.textContent = i;
+                    a.addEventListener("click", function (e) {
+                        e.preventDefault();
+                        currentPage = i;
+                        renderTable();
+                    });
+                    li.appendChild(a);
+                    paginationPages.appendChild(li);
+                }
+            }
+
+            prevBtn.addEventListener("click", function (e) {
+                e.preventDefault();
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderTable();
+                }
+            });
+
+            nextBtn.addEventListener("click", function (e) {
+                e.preventDefault();
+                const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    renderTable();
+                }
+            });
+
+            if (searchInput) {
+                searchInput.addEventListener("keyup", function () {
+                    const query = this.value.toLowerCase();
+
+                    filteredRows = rows.filter(row => {
+                        const textContent = row.textContent.toLowerCase();
+                        return textContent.includes(query);
+                    });
+
+                    currentPage = 1;
+                    renderTable();
+                });
+            }
+
+            // Initial render
+            renderTable();
+        });
+
+        function confirmDelete(event, form) {
+            event.preventDefault();
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#f06548',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
+            return false;
+        }
+    </script>
+</body>
+
+</html>

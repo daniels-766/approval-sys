@@ -387,3 +387,30 @@ def export_submissions_csv(submissions: list[Submission]) -> str:
             }
         )
     return output.getvalue()
+
+
+def delete_submission(db: Session, submission_id: int) -> bool:
+    """Delete a submission and its associated files."""
+    submission = get_submission_by_id(db, submission_id)
+    if not submission:
+        return False
+
+    # Delete associated files
+    from app.config import settings
+    
+    # Single document path (legacy/compat)
+    if submission.document_path:
+        file_path = os.path.join(settings.UPLOAD_DIR, submission.document_path)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+    # Multi attachments
+    for attachment in submission.attachments:
+        file_path = os.path.join(settings.UPLOAD_DIR, attachment.file_path)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+    # Delete from DB (cascades to audit and attachment records)
+    db.delete(submission)
+    db.commit()
+    return True

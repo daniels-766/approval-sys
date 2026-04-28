@@ -272,16 +272,16 @@
                                 <div class="card-body border border-dashed border-end-0 border-start-0">
                                     <form onsubmit="return false;">
                                         <div class="row g-3">
-                                            <div class="col-xxl-8 col-sm-12">
+                                            <div class="col-xxl-5 col-sm-12">
                                                 <div class="search-box">
-                                                    <input type="text" class="form-control bg-light border-light" id="submission-search" placeholder="Search for tasks or something...">
+                                                    <input type="text" class="form-control bg-light border-light" id="submission-search" placeholder="Search for tasks, code, or category...">
                                                     <i class="ri-search-line search-icon"></i>
                                                 </div>
                                             </div>
-                                            <div class="col-xxl-3 col-sm-8">
+                                            <div class="col-xxl-3 col-sm-6">
                                                 <div class="input-light">
                                                     <select class="form-control" id="idStatus">
-                                                        <option value="all" selected>All</option>
+                                                        <option value="all" selected>All Status</option>
                                                         <option value="pending">Pending</option>
                                                         <option value="need_revision">Need Revision</option>
                                                         <option value="approved">Approved</option>
@@ -289,9 +289,19 @@
                                                     </select>
                                                 </div>
                                             </div>
+                                            <div class="col-xxl-3 col-sm-6">
+                                                <div class="input-light">
+                                                    <select class="form-control" id="idCategory">
+                                                        <option value="all" selected>All Categories</option>
+                                                        {% for cat in categories %}
+                                                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                            </div>
                                             <div class="col-xxl-1 col-sm-4">
                                                 <button type="button" class="btn btn-primary w-100" id="applyFilters">
-                                                    <i class="ri-equalizer-fill me-1 align-bottom"></i> Filters
+                                                    <i class="ri-equalizer-fill align-bottom"></i>
                                                 </button>
                                             </div>
                                         </div>
@@ -314,7 +324,9 @@
                                             </thead>
                                             <tbody class="list form-check-all">
                                                 {% for sub in submissions %}
-                                                <tr data-search="{{ (sub.submission_code ~ ' ' ~ sub.name ~ ' ' ~ sub.category.name)|lower }}" data-status="{{ sub.status }}">
+                                                <tr data-search="{{ (sub.submission_code ~ ' ' ~ sub.name ~ ' ' ~ sub.category.name)|lower }}" 
+                                                    data-status="{{ sub.status }}"
+                                                    data-category="{{ sub.category_id }}">
                                                     <td class="id">
                                                         <a href="/user/submission/{{ sub.id }}" class="fw-medium link-primary">{{ sub.submission_code }}</a>
                                                     </td>
@@ -443,14 +455,12 @@
     <script src="/static/assets/js/plugins.js"></script>
     <script src="/static/assets/libs/sweetalert2/sweetalert2.min.js"></script>
     <script src="/static/assets/js/app.js"></script>
-    <script src="/static/assets/libs/list.js/list.min.js"></script>
-    <script src="/static/assets/libs/list.pagination.js/list.pagination.min.js"></script>
-    <script src="/static/assets/js/pages/tasks-list.init.js"></script>
 
     <script>
     document.addEventListener("DOMContentLoaded", function () {
         const searchInput = document.getElementById("submission-search");
         const statusInput = document.getElementById("idStatus");
+        const categoryInput = document.getElementById("idCategory");
         const filterButton = document.getElementById("applyFilters");
         const rows = Array.from(document.querySelectorAll("#tasksTable tbody tr"));
         const emptyState = document.querySelector(".noresult");
@@ -469,15 +479,19 @@
         function applyFilters() {
             const query = (searchInput?.value || "").trim().toLowerCase();
             const status = statusInput?.value || "all";
+            const category = categoryInput?.value || "all";
             let matchingRows = [];
 
             rows.forEach((row) => {
                 const rowQuery = row.dataset.search || "";
                 const rowStatus = row.dataset.status || "";
+                const rowCategory = row.dataset.category || "";
+                
                 const matchesQuery = !query || rowQuery.includes(query);
                 const matchesStatus = status === "all" || rowStatus === status;
+                const matchesCategory = category === "all" || rowCategory === category;
                 
-                if (matchesQuery && matchesStatus) {
+                if (matchesQuery && matchesStatus && matchesCategory) {
                     matchingRows.push(row);
                 } else {
                     row.style.display = "none";
@@ -570,6 +584,9 @@
         }
         if (statusInput) {
             statusInput.addEventListener("change", handleFilterChange);
+        }
+        if (categoryInput) {
+            categoryInput.addEventListener("change", handleFilterChange);
         }
         
         // Initial pagination

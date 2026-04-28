@@ -223,6 +223,19 @@ async def request_revision(
     return RedirectResponse(url="/admin/dashboard?revision=1", status_code=302)
 
 
+@router.post("/submission/{submission_id}/delete")
+async def delete_submission(
+    request: Request, submission_id: int, db: Session = Depends(get_db)
+):
+    """Delete a submission."""
+    admin_id = require_admin(request)
+    if not admin_id:
+        return RedirectResponse(url="/login", status_code=302)
+
+    submission_service.delete_submission(db, submission_id)
+    return RedirectResponse(url="/admin/dashboard?deleted=1", status_code=302)
+
+
 @router.get("/users")
 async def users_page(
     request: Request,
