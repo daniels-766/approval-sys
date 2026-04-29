@@ -16,14 +16,8 @@ from app.services.auth_service import create_user, get_user_by_username
 
 app = FastAPI(title="Approval System", version="1.0.0")
 
-app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
-
 os.makedirs("app/static/uploads", exist_ok=True)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
-
-app.include_router(auth.router)
-app.include_router(user.router)
-app.include_router(admin.router)
 
 
 @app.middleware("http")
@@ -59,6 +53,10 @@ async def session_timeout_middleware(request: Request, call_next):
 
 
 app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
+
+app.include_router(auth.router)
+app.include_router(user.router)
+app.include_router(admin.router)
 
 
 @app.on_event("startup")
