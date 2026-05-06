@@ -62,9 +62,34 @@ def notify_roles(
     link: str | None = None,
     type: str = "info",
     submission_code: str | None = None,
+    division_id: int | None = None,
 ):
-    """Send notification to all users having any of the given roles."""
-    recipients = db.query(User).filter(User.role.in_(list(roles))).all()
+    """Send notification to all users having any of the given roles globally or in a specific division."""
+    # Global role recipients
+    recipients_query = db.query(User).filter(User.role.in_(list(roles)))
+    global_recipients = recipients_query.all()
+    
+    # Division-specific role recipients
+    division_recipients = []
+    if division_id:
+        from app.models.division import UserDivision
+        division_recipients = (
+            db.query(User)
+            .join(User.division_associations)
+            .filter(
+                (UserDivision.division_id == division_id) &
+                (UserDivision.role.in_(list(roles)))
+            )
+            .all()
+        )
+    
+    # Combine and unique by ID
+    recipient_map = {u.id: u for u in global_recipients}
+    for u in division_recipients:
+        recipient_map[u.id] = u
+    
+    recipients = list(recipient_map.values())
+
     for user in recipients:
         db.add(
             Notification(

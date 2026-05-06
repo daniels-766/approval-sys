@@ -225,14 +225,11 @@ def create_submission(
     attachment_pairs = list(attachments or [])
     if document_path and document_original_name:
         attachment_pairs.insert(0, (document_path, document_original_name))
-    # Get division_id from category
-    from app.models.category import Category
-    category = db.query(Category).filter(Category.id == category_id).first()
-    division_id = category.division_id if category else None
-    if not division_id:
-        user = db.query(User).filter(User.id == user_id).first()
-        if user and user.divisions:
-            division_id = user.divisions[0].id
+    # Always use the requester's first division as the submission's division
+    user = db.query(User).filter(User.id == user_id).first()
+    division_id = None
+    if user and user.divisions:
+        division_id = user.divisions[0].id
 
     submission = Submission(
         submission_code=code,
@@ -265,12 +262,13 @@ def create_submission(
         review_link = "/approver/submission/{0}".format(submission.id)
     notification_service.notify_roles(
         db,
-        roles=(required_role,) if required_role == "admin" else (required_role, "admin"),
+        roles=(required_role,),
         title="New Submission",
         message=f"{submission.user.full_name} has created a new submission: {submission.name}",
         link=review_link,
         type="info",
         submission_code=submission.submission_code,
+        division_id=submission.division_id,
     )
 
     # Email confirmation for the requester.
@@ -387,12 +385,13 @@ def approve_submission(
             next_link = "/approver/submission/{0}".format(submission.id)
         notification_service.notify_roles(
             db,
-            roles=(next_required, "admin") if next_required != "admin" else ("admin",),
+            roles=(next_required,),
             title="Submission Needs Review",
             message=f"{submission.submission_code} is ready for step {submission.current_step} review.",
             link=next_link,
             type="info",
             submission_code=submission.submission_code,
+            division_id=submission.division_id,
         )
         return submission
 
@@ -553,10 +552,14 @@ def revise_submission(
     submission.name = name
     submission.purpose = purpose
     submission.nominal = nominal
-    from app.models.category import Category
-    category = db.query(Category).filter(Category.id == category_id).first()
+    # Always use the requester's first division
+    user = db.query(User).filter(User.id == user_id).first()
+    division_id = None
+    if user and user.divisions:
+        division_id = user.divisions[0].id
+    
     submission.category_id = category_id
-    submission.division_id = category.division_id if category else None
+    submission.division_id = division_id
     submission.status = "pending"
     submission.current_step = 1
     submission.reviewed_by = None
@@ -590,12 +593,13 @@ def revise_submission(
         review_link = "/approver/submission/{0}".format(submission.id)
     notification_service.notify_roles(
         db,
-        roles=(required_role,) if required_role == "admin" else (required_role, "admin"),
+        roles=(required_role,),
         title="Submission Revised",
         message=f"{submission.user.full_name} has submitted a revision for {submission.submission_code}",
         link=review_link,
         type="info",
         submission_code=submission.submission_code,
+        division_id=submission.division_id,
     )
     return submission
 

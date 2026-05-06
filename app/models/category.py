@@ -12,14 +12,12 @@ class Category(Base):
     name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1", index=True)
-    division_id: Mapped[int | None] = mapped_column(ForeignKey("divisions.id"), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=get_now_naive)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=get_now_naive, onupdate=get_now_naive
     )
 
     # Relationships
-    division = relationship("Division", backref="categories")
     submissions = relationship("Submission", back_populates="category")
 
     def __repr__(self):

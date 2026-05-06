@@ -111,10 +111,6 @@ def on_startup():
                     )
                 )
 
-            # New migrations for Per-Division Roles
-            if not _mysql_has_column("categories", "division_id"):
-                conn.execute(text("ALTER TABLE categories ADD COLUMN division_id INT NULL"))
-                conn.execute(text("ALTER TABLE categories ADD CONSTRAINT fk_categories_division FOREIGN KEY (division_id) REFERENCES divisions(id)"))
 
             if not _mysql_has_column("submissions", "division_id"):
                 conn.execute(text("ALTER TABLE submissions ADD COLUMN division_id INT NULL"))
@@ -147,8 +143,6 @@ def on_startup():
                     )
                 )
             
-            if not _sqlite_has_column("categories", "division_id"):
-                conn.execute(text("ALTER TABLE categories ADD COLUMN division_id INTEGER NULL"))
             if not _sqlite_has_column("submissions", "division_id"):
                 conn.execute(text("ALTER TABLE submissions ADD COLUMN division_id INTEGER NULL"))
             if not _sqlite_has_column("user_divisions", "role"):

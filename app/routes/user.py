@@ -31,14 +31,9 @@ def render_user_dashboard(
     submissions = submission_service.get_submissions_by_user(db, user_id)
     stats = submission_service.get_user_submission_stats(db, user_id)
     user = auth_service.get_user_by_id(db, user_id)
-    user_division_ids = [assoc.division_id for assoc in user.division_associations]
-    
-    # Filter categories: only those in user's divisions OR global categories (if any)
+    # Filter categories: all active categories are global now
     from app.models.category import Category
-    categories = db.query(Category).filter(
-        (Category.is_active == True) & 
-        ((Category.division_id.in_(user_division_ids)) | (Category.division_id == None))
-    ).order_by(Category.name).all()
+    categories = db.query(Category).filter(Category.is_active == True).order_by(Category.name).all()
     
     notifications = notification_service.get_unread_notifications(db, user_id)
     return templates.TemplateResponse("user/dashboard.html", {
