@@ -107,13 +107,18 @@ async def admin_dashboard(
         ]
     elif staff_user and staff_user.role == "finance":
         submissions = [s for s in submissions if s.status in ("approved", "paid")]
-    # Admin dashboard is meant to approve requests submitted by approvers only.
-    submissions = [s for s in submissions if s.user and s.user.role == "approver"]
+    # Admin sees submissions from anyone who has 'approver' authority (Global or Division-level)
+    def is_effective_approver(user):
+        if not user: return False
+        if user.role == "approver": return True
+        return any(assoc.role == "approver" for assoc in user.division_associations)
+
+    submissions = [s for s in submissions if is_effective_approver(s.user)]
+    
     categories = category_service.get_all_categories(db)
     divisions = division_service.get_all_divisions(db)
     users = (
         db.query(User)
-        .filter(User.role == "user")
         .order_by(User.full_name)
         .all()
     )
