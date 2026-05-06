@@ -18,6 +18,10 @@ async def login_page(request: Request, error: str = None):
         role = request.session.get("role", "user")
         if role == "admin":
             return RedirectResponse(url="/admin/dashboard", status_code=302)
+        if role == "approver":
+            return RedirectResponse(url="/approver/dashboard", status_code=302)
+        if role == "finance":
+            return RedirectResponse(url="/finance/dashboard", status_code=302)
         return RedirectResponse(url="/user/dashboard", status_code=302)
 
     # Use error from query param if context error is None
@@ -50,6 +54,10 @@ async def login(
 
     if user.role == "admin":
         return RedirectResponse(url="/admin/dashboard", status_code=302)
+    if user.role == "approver":
+        return RedirectResponse(url="/approver/dashboard", status_code=302)
+    if user.role == "finance":
+        return RedirectResponse(url="/finance/dashboard", status_code=302)
     return RedirectResponse(url="/user/dashboard", status_code=302)
 
 

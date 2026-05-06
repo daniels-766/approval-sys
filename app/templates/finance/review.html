@@ -25,7 +25,7 @@
                 <div class="navbar-header">
                     <div class="d-flex">
                         <div class="navbar-brand-box horizontal-logo">
-                            <a href="/admin/dashboard" class="logo logo-dark">
+                            <a href="/finance/dashboard" class="logo logo-dark">
                                 <span class="logo-sm">
                                     <img src="/static/assets/images/logo-sm.png" alt="" height="22">
                                 </span>
@@ -33,7 +33,7 @@
                                     <img src="/static/assets/images/logo-dark.png" alt="" height="17">
                                 </span>
                             </a>
-                            <a href="/admin/dashboard" class="logo logo-light">
+                            <a href="/finance/dashboard" class="logo logo-light">
                                 <span class="logo-sm">
                                     <img src="/static/assets/images/logo-sm.png" alt="" height="22">
                                 </span>
@@ -83,7 +83,7 @@
                             </button>
                             <div class="dropdown-menu dropdown-menu-end">
                                 <h6 class="dropdown-header">Welcome {{ session.get('full_name', 'Admin') }}!</h6>
-                                <a class="dropdown-item" href="/admin/dashboard"><i
+                                <a class="dropdown-item" href="/finance/dashboard"><i
                                         class="mdi mdi-view-dashboard text-muted fs-16 align-middle me-1"></i> <span
                                         class="align-middle">Dashboard</span></a>
                                 <a class="dropdown-item" href="/logout"><i
@@ -98,7 +98,7 @@
 
         <div class="app-menu navbar-menu">
             <div class="navbar-brand-box">
-                <a href="/admin/dashboard" class="logo logo-dark">
+                <a href="/finance/dashboard" class="logo logo-dark">
                     <span class="logo-sm">
                         <img src="/static/assets/images/logo-sm.png" alt="" height="22">
                     </span>
@@ -106,7 +106,7 @@
                         <img src="/static/assets/images/logo-dark.png" alt="" height="17">
                     </span>
                 </a>
-                <a href="/admin/dashboard" class="logo logo-light">
+                <a href="/finance/dashboard" class="logo logo-light">
                     <span class="logo-sm">
                         <img src="/static/assets/images/logo-sm.png" alt="" height="22">
                     </span>
@@ -126,10 +126,26 @@
                     <ul class="navbar-nav" id="navbar-nav">
                         <li class="menu-title"><span data-key="t-menu">Menu</span></li>
                         <li class="nav-item">
-                            <a class="nav-link menu-link" href="/admin/dashboard">
+                            <a class="nav-link menu-link" href="/finance/dashboard">
                                 <i class="ri-dashboard-2-line"></i> <span>Dashboard</span>
                             </a>
                         </li>
+                        {# Approvals handled by approver/admin roles #}
+                        {% if session.get('role') in ['finance', 'admin'] %}
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="/finance/dashboard?status=approved">
+                                <i class="ri-secure-payment-line"></i> <span>Payments</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if session.get('role') == 'approver' %}
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="/user/dashboard">
+                                <i class="ri-file-list-3-line"></i> <span>My Requests</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if session.get('role') == 'admin' %}
                         <li class="nav-item">
                             <a class="nav-link menu-link" href="/admin/statistics">
                                 <i class="ri-pie-chart-line"></i> <span>Statistics</span>
@@ -150,6 +166,7 @@
                                 <i class="ri-user-settings-line"></i> <span>Users Management</span>
                             </a>
                         </li>
+                        {% endif %}
                         <li class="nav-item">
                             <a class="nav-link menu-link" href="/logout">
                                 <i class="ri-logout-box-r-line"></i> <span>Logout</span>
@@ -172,7 +189,7 @@
                                 <h4 class="mb-sm-0">Review Submission</h4>
                                 <div class="page-title-right">
                                     <ol class="breadcrumb m-0">
-                                        <li class="breadcrumb-item"><a href="/admin/dashboard">Admin</a></li>
+                                        <li class="breadcrumb-item"><a href="/finance/dashboard">Finance</a></li>
                                         <li class="breadcrumb-item active">Review</li>
                                     </ol>
                                 </div>
@@ -261,10 +278,16 @@
                                             <textarea class="form-control" id="payment-notes" rows="3"
                                                 placeholder="Optional notes for payment..."></textarea>
                                         </div>
+                                        <div class="col-lg-12">
+                                            <label class="form-label" for="payment-files-ui">Payment Proof (Files)</label>
+                                            <input type="file" class="form-control" id="payment-files-ui" multiple
+                                                onchange="document.getElementById('payment-files').files=this.files;">
+                                        </div>
                                         <div class="col-12">
                                             <div class="d-flex gap-2 justify-content-end mt-2">
-                                                <form method="POST" action="/admin/submission/{{ submission.id }}/pay" id="pay-form">
+                                                <form method="POST" action="/finance/submission/{{ submission.id }}/pay" id="pay-form" enctype="multipart/form-data">
                                                     <input type="hidden" name="notes" id="pay-notes">
+                                                    <input type="file" class="d-none" id="payment-files" name="documents" multiple>
                                                     <button type="button" class="btn btn-warning" onclick="submitPay()">
                                                         <i class="ri-check-double-line align-bottom me-1"></i> Mark as Paid
                                                     </button>
@@ -313,25 +336,26 @@
                                                     <td>{{ submission.category.name }}</td>
                                                 </tr>
                                                 <tr>
-                                                    <td class="fw-medium">Status</td>
-                                                    <td>
-                                                        {% if submission.status == 'pending' %}
+                                                        <td class="fw-medium">Status</td>
+                                                        <td>
+                                                            {% if submission.status == 'pending' %}
                                                         <span
                                                             class="badge bg-warning-subtle text-warning text-uppercase">Pending</span>
-                                                        {% elif submission.status == 'approved' %}
+                                                            {% elif submission.status == 'approved' %}
                                                         <span
-                                                            class="badge bg-success-subtle text-success text-uppercase">Approved</span>
-                                                        {% elif submission.status == 'paid' %}
+                                                            class="badge bg-success-subtle text-success text-uppercase">Need
+                                                            Payment</span>
+                                                            {% elif submission.status == 'paid' %}
                                                         <span
                                                             class="badge bg-primary-subtle text-primary text-uppercase">Paid</span>
-                                                        {% elif submission.status == 'rejected' %}
+                                                            {% elif submission.status == 'rejected' %}
                                                         <span
                                                             class="badge bg-danger-subtle text-danger text-uppercase">Rejected</span>
-                                                        {% else %}
+                                                            {% else %}
                                                         <span class="badge bg-info-subtle text-info text-uppercase">Need
                                                             Revision</span>
-                                                        {% endif %}
-                                                    </td>
+                                                            {% endif %}
+                                                        </td>
                                                 </tr>
                                                 <tr>
                                                     <td class="fw-medium">Approval</td>

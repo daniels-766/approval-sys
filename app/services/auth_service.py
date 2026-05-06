@@ -81,7 +81,7 @@ def get_all_users(
                 User.full_name.ilike(pattern),
             )
         )
-    if role in ("user", "admin"):
+    if role in ("user", "approver", "admin", "finance"):
         query = query.filter(User.role == role)
     if active is not None:
         query = query.filter(User.is_active == active)
@@ -105,7 +105,7 @@ def update_user(
     user.username = username
     user.email = email
     user.full_name = full_name
-    user.role = role if role in ("user", "admin") else "user"
+    user.role = role if role in ("user", "approver", "admin", "finance") else "user"
     user.is_active = is_active
     if division_ids is not None:
         user.divisions = (

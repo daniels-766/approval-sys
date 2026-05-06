@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.notification import Notification
 from app.models.user import User
+from app.services import email_service
 
 def create_notification(db: Session, user_id: int, title: str, message: str, link: str = None, type: str = "info"):
     """Create a new notification for a user."""
@@ -13,6 +14,29 @@ def create_notification(db: Session, user_id: int, title: str, message: str, lin
     )
     db.add(notif)
     db.commit()
+    return notif
+
+
+def create_notification_with_email(
+    db: Session,
+    user_id: int,
+    title: str,
+    message: str,
+    link: str | None = None,
+    type: str = "info",
+    submission_code: str | None = None,
+):
+    """Create in-app notification and (optionally) send email to that user."""
+    notif = create_notification(db, user_id, title, message, link=link, type=type)
+    user = db.query(User).filter(User.id == user_id).first()
+    if user and user.email:
+        subject, body_text, body_html = email_service.build_submission_email(
+            title=title,
+            message=message,
+            link=link,
+            submission_code=submission_code,
+        )
+        email_service.send_email_async([user.email], subject, body_text, body_html=body_html)
     return notif
 
 def notify_all_admins(db: Session, title: str, message: str, link: str = None, type: str = "info"):
@@ -28,6 +52,41 @@ def notify_all_admins(db: Session, title: str, message: str, link: str = None, t
         )
         db.add(notif)
     db.commit()
+
+
+def notify_roles(
+    db: Session,
+    roles: tuple[str, ...],
+    title: str,
+    message: str,
+    link: str | None = None,
+    type: str = "info",
+    submission_code: str | None = None,
+):
+    """Send notification to all users having any of the given roles."""
+    recipients = db.query(User).filter(User.role.in_(list(roles))).all()
+    for user in recipients:
+        db.add(
+            Notification(
+                user_id=user.id,
+                title=title,
+                message=message,
+                link=link,
+                type=type,
+            )
+        )
+    db.commit()
+
+    # Email (fire-and-forget) to role recipients.
+    emails = [u.email for u in recipients if getattr(u, "email", None)]
+    if emails:
+        subject, body_text, body_html = email_service.build_submission_email(
+            title=title,
+            message=message,
+            link=link,
+            submission_code=submission_code,
+        )
+        email_service.send_email_async(emails, subject, body_text, body_html=body_html)
 
 def get_unread_notifications(db: Session, user_id: int, limit: int = 10):
     """Get unread notifications for a user."""

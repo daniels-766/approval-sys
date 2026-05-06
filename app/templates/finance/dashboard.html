@@ -25,7 +25,7 @@
                 <div class="navbar-header">
                     <div class="d-flex">
                         <div class="navbar-brand-box horizontal-logo">
-                            <a href="/admin/dashboard" class="logo logo-dark">
+                            <a href="/finance/dashboard" class="logo logo-dark">
                                 <span class="logo-sm">
                                     <img src="/static/assets/images/logo-sm.png" alt="" height="22">
                                 </span>
@@ -33,7 +33,7 @@
                                     <img src="/static/assets/images/logo-dark.png" alt="" height="17">
                                 </span>
                             </a>
-                            <a href="/admin/dashboard" class="logo logo-light">
+                            <a href="/finance/dashboard" class="logo logo-light">
                                 <span class="logo-sm">
                                     <img src="/static/assets/images/logo-sm.png" alt="" height="22">
                                 </span>
@@ -83,7 +83,7 @@
                             </button>
                             <div class="dropdown-menu dropdown-menu-end">
                                 <h6 class="dropdown-header">Welcome {{ session.get('full_name', 'Admin') }}!</h6>
-                                <a class="dropdown-item" href="/admin/dashboard"><i
+                                <a class="dropdown-item" href="/finance/dashboard"><i
                                         class="mdi mdi-view-dashboard text-muted fs-16 align-middle me-1"></i> <span
                                         class="align-middle">Dashboard</span></a>
                                 <a class="dropdown-item" href="/logout"><i
@@ -98,7 +98,7 @@
 
         <div class="app-menu navbar-menu">
             <div class="navbar-brand-box">
-                <a href="/admin/dashboard" class="logo logo-dark">
+                <a href="/finance/dashboard" class="logo logo-dark">
                     <span class="logo-sm">
                         <img src="/static/assets/images/logo-sm.png" alt="" height="22">
                     </span>
@@ -106,7 +106,7 @@
                         <img src="/static/assets/images/logo-dark.png" alt="" height="17">
                     </span>
                 </a>
-                <a href="/admin/dashboard" class="logo logo-light">
+                <a href="/finance/dashboard" class="logo logo-light">
                     <span class="logo-sm">
                         <img src="/static/assets/images/logo-sm.png" alt="" height="22">
                     </span>
@@ -126,15 +126,33 @@
                     <ul class="navbar-nav" id="navbar-nav">
                         <li class="menu-title"><span data-key="t-menu">Menu</span></li>
                         <li class="nav-item">
-                            <a class="nav-link menu-link active" href="/admin/dashboard">
+                            <a class="nav-link menu-link active" href="/finance/dashboard">
                                 <i class="ri-dashboard-2-line"></i> <span>Dashboard</span>
                             </a>
                         </li>
+                        {# Approvals handled by approver/admin roles #}
+                        {% if session.get('role') in ['finance', 'admin'] %}
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="/finance/dashboard?status=approved">
+                                <i class="ri-secure-payment-line"></i> <span>Payments</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if session.get('role') == 'admin' %}
                         <li class="nav-item">
                             <a class="nav-link menu-link" href="/admin/statistics">
                                 <i class="ri-pie-chart-line"></i> <span>Statistics</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if session.get('role') == 'approver' %}
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="/user/dashboard">
+                                <i class="ri-file-list-3-line"></i> <span>My Requests</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if session.get('role') == 'admin' %}
                         <li class="nav-item">
                             <a class="nav-link menu-link" href="/admin/categories">
                                 <i class="ri-list-check"></i> <span>Categories</span>
@@ -150,6 +168,7 @@
                                 <i class="ri-user-settings-line"></i> <span>Users Management</span>
                             </a>
                         </li>
+                        {% endif %}
                         <li class="nav-item">
                             <a class="nav-link menu-link" href="/logout">
                                 <i class="ri-logout-box-r-line"></i> <span>Logout</span>
@@ -173,7 +192,7 @@
                                 <h4 class="mb-sm-0">Admin Dashboard</h4>
                                 <div class="page-title-right">
                                     <ol class="breadcrumb m-0">
-                                        <li class="breadcrumb-item"><a href="/admin/dashboard">Admin</a></li>
+                                        <li class="breadcrumb-item"><a href="/finance/dashboard">Finance</a></li>
                                         <li class="breadcrumb-item active">Dashboard</li>
                                     </ol>
                                 </div>
@@ -230,62 +249,20 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-xxl-2 col-sm-6">
+                        <div class="col-xxl-3 col-sm-6">
                             <div class="card card-animate">
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between">
                                         <div>
-                                            <p class="fw-medium text-muted mb-0">Pending</p>
-                                            <h2 class="mt-4 ff-secondary fw-semibold"><span class="counter-value"
-                                                    data-target="{{ stats.pending }}">{{ stats.pending }}</span></h2>
-                                        </div>
-                                        <div>
-                                            <div class="avatar-sm flex-shrink-0">
-                                                <span
-                                                    class="avatar-title bg-warning-subtle text-warning rounded-circle fs-4">
-                                                    <i class="ri-time-line"></i>
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-xxl-2 col-sm-6">
-                            <div class="card card-animate">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between">
-                                        <div>
-                                            <p class="fw-medium text-muted mb-0">Revision</p>
-                                            <h2 class="mt-4 ff-secondary fw-semibold"><span class="counter-value"
-                                                    data-target="{{ stats.need_revision }}">{{ stats.need_revision
-                                                    }}</span></h2>
-                                        </div>
-                                        <div>
-                                            <div class="avatar-sm flex-shrink-0">
-                                                <span class="avatar-title bg-info-subtle text-info rounded-circle fs-4">
-                                                    <i class="ri-edit-2-line"></i>
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-xxl-2 col-sm-6">
-                            <div class="card card-animate">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between">
-                                        <div>
-                                            <p class="fw-medium text-muted mb-0">Approved</p>
+                                            <p class="fw-medium text-muted mb-0">Need Payment</p>
                                             <h2 class="mt-4 ff-secondary fw-semibold"><span class="counter-value"
                                                     data-target="{{ stats.approved }}">{{ stats.approved }}</span></h2>
                                         </div>
                                         <div>
                                             <div class="avatar-sm flex-shrink-0">
                                                 <span
-                                                    class="avatar-title bg-success-subtle text-success rounded-circle fs-4">
-                                                    <i class="ri-checkbox-circle-line"></i>
+                                                    class="avatar-title bg-warning-subtle text-warning rounded-circle fs-4">
+                                                    <i class="ri-secure-payment-line"></i>
                                                 </span>
                                             </div>
                                         </div>
@@ -298,15 +275,15 @@
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between">
                                         <div>
-                                            <p class="fw-medium text-muted mb-0">Rejected</p>
+                                            <p class="fw-medium text-muted mb-0">Paid</p>
                                             <h2 class="mt-4 ff-secondary fw-semibold"><span class="counter-value"
-                                                    data-target="{{ stats.rejected }}">{{ stats.rejected }}</span></h2>
+                                                    data-target="{{ stats.paid }}">{{ stats.paid }}</span></h2>
                                         </div>
                                         <div>
                                             <div class="avatar-sm flex-shrink-0">
                                                 <span
-                                                    class="avatar-title bg-danger-subtle text-danger rounded-circle fs-4">
-                                                    <i class="ri-close-circle-line"></i>
+                                                    class="avatar-title bg-primary-subtle text-primary rounded-circle fs-4">
+                                                    <i class="ri-check-double-line"></i>
                                                 </span>
                                             </div>
                                         </div>
@@ -326,7 +303,7 @@
                                         </div>
                                         <div class="col-sm-auto">
                                             <div class="d-flex gap-1 flex-wrap">
-                                                <a href="/admin/dashboard/export{% if request.url.query %}?{{ request.url.query }}{% endif %}"
+                                                <a href="/finance/dashboard/export{% if request.url.query %}?{{ request.url.query }}{% endif %}"
                                                     class="btn btn-success"><i
                                                         class="ri-file-download-line align-bottom me-1"></i> Export
                                                     CSV</a>
@@ -335,7 +312,7 @@
                                     </div>
                                 </div>
                                 <div class="card-body border border-dashed border-end-0 border-start-0">
-                                    <form method="GET" action="/admin/dashboard">
+                                    <form method="GET" action="/finance/dashboard">
                                         <input type="hidden" name="status" value="{{ current_filter }}">
                                         <div class="row g-3">
                                             <div class="col-xxl-3 col-sm-6">
@@ -381,7 +358,7 @@
                                                 <button type="submit" class="btn btn-primary w-100"> <i
                                                         class="ri-equalizer-fill me-1 align-bottom"></i>
                                                     Filters</button>
-                                                <a href="/admin/dashboard"
+                                                <a href="/finance/dashboard?status={{ current_filter }}"
                                                     class="btn btn-soft-secondary w-100">Reset</a>
                                             </div>
                                         </div>
@@ -415,33 +392,21 @@
                                     <div>
                                         <ul class="nav nav-tabs nav-tabs-custom nav-success mb-3" role="tablist">
                                             <li class="nav-item">
-                                                <a class="nav-link py-3 {% if current_filter == 'all' %}active{% endif %}"
-                                                    href="/admin/dashboard" role="tab">
-                                                    <i class="ri-store-2-fill me-1 align-bottom"></i> All
-                                                </a>
-                                            </li>
-                                            <li class="nav-item">
-                                                <a class="nav-link py-3 {% if current_filter == 'pending' %}active{% endif %}"
-                                                    href="/admin/dashboard?status=pending" role="tab">
-                                                    <i class="ri-time-line me-1 align-bottom"></i> Pending
-                                                </a>
-                                            </li>
-                                            <li class="nav-item">
-                                                <a class="nav-link py-3 {% if current_filter == 'need_revision' %}active{% endif %}"
-                                                    href="/admin/dashboard?status=need_revision" role="tab">
-                                                    <i class="ri-edit-2-line me-1 align-bottom"></i> Need Revision
-                                                </a>
-                                            </li>
-                                            <li class="nav-item">
                                                 <a class="nav-link py-3 {% if current_filter == 'approved' %}active{% endif %}"
-                                                    href="/admin/dashboard?status=approved" role="tab">
-                                                    <i class="ri-checkbox-circle-line me-1 align-bottom"></i> Approved
+                                                    href="/finance/dashboard?status=approved" role="tab">
+                                                    <i class="ri-secure-payment-line me-1 align-bottom"></i> Need Payment
                                                 </a>
                                             </li>
                                             <li class="nav-item">
-                                                <a class="nav-link py-3 {% if current_filter == 'rejected' %}active{% endif %}"
-                                                    href="/admin/dashboard?status=rejected" role="tab">
-                                                    <i class="ri-close-circle-line me-1 align-bottom"></i> Rejected
+                                                <a class="nav-link py-3 {% if current_filter == 'paid' %}active{% endif %}"
+                                                    href="/finance/dashboard?status=paid" role="tab">
+                                                    <i class="ri-check-double-line me-1 align-bottom"></i> Paid
+                                                </a>
+                                            </li>
+                                            <li class="nav-item">
+                                                <a class="nav-link py-3 {% if current_filter == 'all' %}active{% endif %}"
+                                                    href="/finance/dashboard?status=all" role="tab">
+                                                    <i class="ri-list-check-2 me-1 align-bottom"></i> All
                                                 </a>
                                             </li>
                                         </ul>
@@ -474,24 +439,28 @@
                                                 <tbody class="list form-check-all" id="submission-list-data">
                                                     {% for sub in submissions %}
                                                     <tr>
-                                                        <td class="code"><a href="/admin/submission/{{ sub.id }}"
+                                                        <td class="code"><a href="/finance/submission/{{ sub.id }}"
                                                                 class="fw-medium link-primary">{{ sub.submission_code
                                                                 }}</a></td>
                                                         <td class="user">{{ sub.user.full_name }}</td>
                                                         <td class="name">{{ sub.name }}</td>
                                                         <td class="category">{{ sub.category.name }}</td>
-                                                        <td class="nominal">₹ {{ "{:,.2f}".format(sub.nominal) }}</td>
+                                                        <td class="nominal">&#8377; {{ "{:,.2f}".format(sub.nominal) }}</td>
                                                         <td class="status">
                                                             {% set status_class = 'bg-warning-subtle text-warning' %}
                                                             {% if sub.status == 'approved' %}{% set status_class =
                                                             'bg-success-subtle text-success' %}{% endif %}
+                                                            {% if sub.status == 'paid' %}{% set status_class =
+                                                            'bg-primary-subtle text-primary' %}{% endif %}
                                                             {% if sub.status == 'rejected' %}{% set status_class =
                                                             'bg-danger-subtle text-danger' %}{% endif %}
                                                             {% if sub.status == 'need_revision' %}{% set status_class =
                                                             'bg-info-subtle text-info' %}{% endif %}
                                                             <span class="badge {{ status_class }} text-uppercase">
-                                                                {% if sub.status == 'need_revision' %}Need Revision{%
-                                                                else %}{{ sub.status }}{% endif %}
+                                                                {% if sub.status == 'approved' %}Need Payment
+                                                                {% elif sub.status == 'paid' %}Paid
+                                                                {% elif sub.status == 'need_revision' %}Need Revision
+                                                                {% else %}{{ sub.status }}{% endif %}
                                                             </span>
                                                         </td>
                                                         <td class="date">{{ sub.created_at.strftime('%d %b %Y') }}</td>
@@ -500,19 +469,10 @@
                                                                 <li class="list-inline-item" data-bs-toggle="tooltip"
                                                                     data-bs-trigger="hover" data-bs-placement="top"
                                                                     title="{% if sub.status in ['pending', 'need_revision'] %}Review{% else %}View{% endif %}">
-                                                                    <a href="/admin/submission/{{ sub.id }}"
+                                                                    <a href="/finance/submission/{{ sub.id }}"
                                                                         class="text-primary d-inline-block">
                                                                         <i class="ri-eye-fill fs-16"></i>
                                                                     </a>
-                                                                </li>
-                                                                <li class="list-inline-item" data-bs-toggle="tooltip"
-                                                                    data-bs-trigger="hover" data-bs-placement="top"
-                                                                    title="Delete">
-                                                                    <form action="/admin/submission/{{ sub.id }}/delete" method="POST" onsubmit="return confirmDelete(event, this);">
-                                                                        <button type="submit" class="btn text-danger p-0 border-0 bg-transparent">
-                                                                            <i class="ri-delete-bin-fill fs-16"></i>
-                                                                        </button>
-                                                                    </form>
                                                                 </li>
                                                             </ul>
                                                         </td>

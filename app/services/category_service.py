@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models.category import Category
+from app.models.approval_step import ApprovalStep
 
 
 def get_all_categories(db: Session, active_only: bool = False):
@@ -21,6 +22,11 @@ def create_category(db: Session, name: str, description: str | None = None) -> C
     db.add(category)
     db.commit()
     db.refresh(category)
+
+    # Default 2-step approval workflow: approver -> admin
+    db.add(ApprovalStep(category_id=category.id, step_no=1, required_role="approver"))
+    db.add(ApprovalStep(category_id=category.id, step_no=2, required_role="admin"))
+    db.commit()
     return category
 
 

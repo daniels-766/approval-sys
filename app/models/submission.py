@@ -3,6 +3,7 @@ from decimal import Decimal
 from sqlalchemy import String, Text, DateTime, ForeignKey, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
+from app.utils.time_utils import get_now_naive
 
 
 class Submission(Base):
@@ -23,14 +24,25 @@ class Submission(Base):
         server_default="pending",
         index=True,
     )
+    current_step: Mapped[int] = mapped_column(
+        default=1,
+        server_default="1",
+        index=True,
+    )
     admin_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     reviewed_by: Mapped[int | None] = mapped_column(
         ForeignKey("users.id"), nullable=True, index=True
     )
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+    paid_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True, index=True
+    )
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    payment_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=get_now_naive, index=True)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime, default=get_now_naive, onupdate=get_now_naive
     )
 
     # Relationships
@@ -38,6 +50,7 @@ class Submission(Base):
     reviewer = relationship(
         "User", back_populates="reviewed_submissions", foreign_keys=[reviewed_by]
     )
+    payer = relationship("User", foreign_keys=[paid_by])
     category = relationship("Category", back_populates="submissions")
     attachments = relationship(
         "SubmissionAttachment",
@@ -63,7 +76,14 @@ class SubmissionAttachment(Base):
     submission_id: Mapped[int] = mapped_column(ForeignKey("submissions.id"), nullable=False, index=True)
     file_path: Mapped[str] = mapped_column(String(500), nullable=False)
     original_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    # "submission" (request attachments) or "payment" (finance proof).
+    kind: Mapped[str] = mapped_column(
+        String(20),
+        default="submission",
+        server_default="submission",
+        index=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=get_now_naive)
 
     submission = relationship("Submission", back_populates="attachments")
 
@@ -75,10 +95,11 @@ class SubmissionAudit(Base):
     submission_id: Mapped[int] = mapped_column(ForeignKey("submissions.id"), nullable=False, index=True)
     actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     action: Mapped[str] = mapped_column(String(50), nullable=False)
+    step_no: Mapped[int | None] = mapped_column(nullable=True, index=True)
     status_from: Mapped[str | None] = mapped_column(String(30), nullable=True)
     status_to: Mapped[str | None] = mapped_column(String(30), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=get_now_naive)
 
     submission = relationship("Submission", back_populates="audit_entries")
     actor = relationship("User")

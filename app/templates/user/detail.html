@@ -323,10 +323,17 @@
                             <div class="card">
                                 <div class="card-header">
                                     <div>
+                                        {% set req_attachments = submission.attachments | rejectattr('kind', 'equalto', 'payment') | list %}
+                                        {% set payment_attachments = submission.attachments | selectattr('kind', 'equalto', 'payment') | list %}
                                         <ul class="nav nav-tabs-custom rounded card-header-tabs border-bottom-0" role="tablist">
                                             <li class="nav-item">
                                                 <a class="nav-link active" data-bs-toggle="tab" href="#attachments-tab" role="tab">
-                                                    Attachments {% if submission.attachments %}({{ submission.attachments|length }}){% endif %}
+                                                    Attachments {% if req_attachments %}({{ req_attachments|length }}){% endif %}
+                                                </a>
+                                            </li>
+                                            <li class="nav-item">
+                                                <a class="nav-link" data-bs-toggle="tab" href="#payment-tab" role="tab">
+                                                    Payment Detail {% if payment_attachments %}({{ payment_attachments|length }}){% endif %}
                                                 </a>
                                             </li>
                                             <li class="nav-item">
@@ -349,8 +356,8 @@
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {% if submission.attachments %}
-                                                            {% for attachment in submission.attachments %}
+                                                        {% if req_attachments %}
+                                                            {% for attachment in req_attachments %}
                                                             <tr>
                                                                 <td>
                                                                     <div class="d-flex align-items-center">
@@ -395,6 +402,72 @@
                                                     </tbody>
                                                 </table>
                                             </div>
+                                        </div>
+
+                                        <div class="tab-pane" id="payment-tab" role="tabpanel">
+                                            {% if submission.status != 'paid' %}
+                                            <div class="text-center text-muted py-4">
+                                                Payment has not been completed yet.
+                                            </div>
+                                            {% else %}
+                                            <div class="row g-3">
+                                                <div class="col-lg-5">
+                                                    <div class="alert alert-info border-0 mb-0">
+                                                        <h6 class="mb-1">Finance Notes</h6>
+                                                        <div class="text-muted">{{ submission.payment_notes or '-' }}</div>
+                                                        <div class="text-muted mt-2">
+                                                            <small>
+                                                                Paid by {{ submission.payer.full_name if submission.payer else 'Finance' }}
+                                                                {% if submission.paid_at %} on {{ submission.paid_at.strftime('%d %b %Y, %H:%M') }}{% endif %}
+                                                            </small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-lg-7">
+                                                    <div class="table-responsive table-card">
+                                                        <table class="table table-borderless align-middle mb-0">
+                                                            <thead class="table-light text-muted">
+                                                                <tr>
+                                                                    <th scope="col">File Name</th>
+                                                                    <th scope="col">Action</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {% if payment_attachments %}
+                                                                    {% for attachment in payment_attachments %}
+                                                                    <tr>
+                                                                        <td>
+                                                                            <div class="d-flex align-items-center">
+                                                                                <div class="avatar-sm flex-shrink-0">
+                                                                                    <div class="avatar-title bg-primary-subtle text-primary rounded fs-20">
+                                                                                        <i class="ri-secure-payment-line"></i>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div class="ms-3 flex-grow-1">
+                                                                                    <h6 class="fs-15 mb-0">
+                                                                                        <a href="/static/uploads/{{ attachment.file_path }}" target="_blank" class="text-body">{{ attachment.original_name }}</a>
+                                                                                    </h6>
+                                                                                </div>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td>
+                                                                            <a href="/static/uploads/{{ attachment.file_path }}" target="_blank" class="btn btn-sm btn-soft-info">
+                                                                                <i class="ri-download-2-line align-bottom me-1"></i> Download
+                                                                            </a>
+                                                                        </td>
+                                                                    </tr>
+                                                                    {% endfor %}
+                                                                {% else %}
+                                                                    <tr>
+                                                                        <td colspan="2" class="text-center text-muted py-4">No payment files uploaded</td>
+                                                                    </tr>
+                                                                {% endif %}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {% endif %}
                                         </div>
                                         
                                         <div class="tab-pane" id="history-tab" role="tabpanel">

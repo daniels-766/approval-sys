@@ -12,6 +12,16 @@ class Settings:
     SECRET_KEY: str = os.getenv("SECRET_KEY", "gyKkEmXyD33MR3fwKTfMvFccsOvZ1zrora87w54V0pZ")
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "app/static/uploads")
     MAX_UPLOAD_SIZE: int = int(os.getenv("MAX_UPLOAD_SIZE", "5242880"))  # 5MB
+    APP_BASE_URL: str = os.getenv("APP_BASE_URL", "https://approve.vjr.co.id")
+
+    # Email (SMTP)
+    EMAIL_ENABLED: bool = os.getenv("EMAIL_ENABLED", "0") == "1"
+    EMAIL_FROM: str = os.getenv("EMAIL_FROM", "tech@allenhf.in")
+    SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+    SMTP_USER: str = os.getenv("SMTP_USER", "tech@allenhf.in")
+    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "jwymoogghdjbucfu")
+    SMTP_USE_TLS: bool = os.getenv("SMTP_USE_TLS", "1") == "1"
 
     # @property
     # def DATABASE_URL(self) -> str:

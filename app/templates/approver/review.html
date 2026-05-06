@@ -25,7 +25,7 @@
                 <div class="navbar-header">
                     <div class="d-flex">
                         <div class="navbar-brand-box horizontal-logo">
-                            <a href="/admin/dashboard" class="logo logo-dark">
+                            <a href="/approver/dashboard" class="logo logo-dark">
                                 <span class="logo-sm">
                                     <img src="/static/assets/images/logo-sm.png" alt="" height="22">
                                 </span>
@@ -33,7 +33,7 @@
                                     <img src="/static/assets/images/logo-dark.png" alt="" height="17">
                                 </span>
                             </a>
-                            <a href="/admin/dashboard" class="logo logo-light">
+                            <a href="/approver/dashboard" class="logo logo-light">
                                 <span class="logo-sm">
                                     <img src="/static/assets/images/logo-sm.png" alt="" height="22">
                                 </span>
@@ -75,15 +75,15 @@
                                     </span>
                                     <span class="text-start ms-xl-2">
                                         <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">{{
-                                            session.get('full_name', 'Admin') }}</span>
+                                            session.get('full_name', 'Approver') }}</span>
                                         <span
-                                            class="d-none d-xl-block ms-1 fs-12 user-name-sub-text">Administrator</span>
+                                            class="d-none d-xl-block ms-1 fs-12 user-name-sub-text">Approver</span>
                                     </span>
                                 </span>
                             </button>
                             <div class="dropdown-menu dropdown-menu-end">
-                                <h6 class="dropdown-header">Welcome {{ session.get('full_name', 'Admin') }}!</h6>
-                                <a class="dropdown-item" href="/admin/dashboard"><i
+                                <h6 class="dropdown-header">Welcome {{ session.get('full_name', 'Approver') }}!</h6>
+                                <a class="dropdown-item" href="/approver/dashboard"><i
                                         class="mdi mdi-view-dashboard text-muted fs-16 align-middle me-1"></i> <span
                                         class="align-middle">Dashboard</span></a>
                                 <a class="dropdown-item" href="/logout"><i
@@ -98,7 +98,7 @@
 
         <div class="app-menu navbar-menu">
             <div class="navbar-brand-box">
-                <a href="/admin/dashboard" class="logo logo-dark">
+                <a href="/approver/dashboard" class="logo logo-dark">
                     <span class="logo-sm">
                         <img src="/static/assets/images/logo-sm.png" alt="" height="22">
                     </span>
@@ -106,7 +106,7 @@
                         <img src="/static/assets/images/logo-dark.png" alt="" height="17">
                     </span>
                 </a>
-                <a href="/admin/dashboard" class="logo logo-light">
+                <a href="/approver/dashboard" class="logo logo-light">
                     <span class="logo-sm">
                         <img src="/static/assets/images/logo-sm.png" alt="" height="22">
                     </span>
@@ -126,10 +126,26 @@
                     <ul class="navbar-nav" id="navbar-nav">
                         <li class="menu-title"><span data-key="t-menu">Menu</span></li>
                         <li class="nav-item">
-                            <a class="nav-link menu-link" href="/admin/dashboard">
+                            <a class="nav-link menu-link" href="/approver/dashboard">
                                 <i class="ri-dashboard-2-line"></i> <span>Dashboard</span>
                             </a>
                         </li>
+                        {% if session.get('role') in ['approver', 'admin'] %}
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="/approver/approvals?status=pending">
+                                <i class="ri-shield-check-line"></i> <span>Approvals</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {# Payments handled by finance role #}
+                        {% if session.get('role') == 'approver' %}
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="/user/dashboard">
+                                <i class="ri-file-list-3-line"></i> <span>My Requests</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if session.get('role') == 'admin' %}
                         <li class="nav-item">
                             <a class="nav-link menu-link" href="/admin/statistics">
                                 <i class="ri-pie-chart-line"></i> <span>Statistics</span>
@@ -150,6 +166,7 @@
                                 <i class="ri-user-settings-line"></i> <span>Users Management</span>
                             </a>
                         </li>
+                        {% endif %}
                         <li class="nav-item">
                             <a class="nav-link menu-link" href="/logout">
                                 <i class="ri-logout-box-r-line"></i> <span>Logout</span>
@@ -172,7 +189,7 @@
                                 <h4 class="mb-sm-0">Review Submission</h4>
                                 <div class="page-title-right">
                                     <ol class="breadcrumb m-0">
-                                        <li class="breadcrumb-item"><a href="/admin/dashboard">Admin</a></li>
+                                        <li class="breadcrumb-item"><a href="/approver/dashboard">Approver</a></li>
                                         <li class="breadcrumb-item active">Review</li>
                                     </ol>
                                 </div>
@@ -206,7 +223,7 @@
                                             <div class="d-flex gap-2 justify-content-end mt-2">
                                                 {% if can_approve %}
                                                 <form method="POST"
-                                                    action="/admin/submission/{{ submission.id }}/approve"
+                                                    action="/approver/submission/{{ submission.id }}/approve"
                                                     id="approve-form">
                                                     <input type="hidden" name="notes" id="approve-notes">
                                                     <button type="button" class="btn btn-success"
@@ -217,7 +234,7 @@
                                                 {% endif %}
                                                 {% if can_revision %}
                                                 <form method="POST"
-                                                    action="/admin/submission/{{ submission.id }}/revision"
+                                                    action="/approver/submission/{{ submission.id }}/revision"
                                                     id="revision-form">
                                                     <input type="hidden" name="notes" id="revision-notes">
                                                     <button type="button" class="btn btn-info"
@@ -228,7 +245,7 @@
                                                 {% endif %}
                                                 {% if can_reject %}
                                                 <form method="POST"
-                                                    action="/admin/submission/{{ submission.id }}/reject"
+                                                    action="/approver/submission/{{ submission.id }}/reject"
                                                     id="reject-form">
                                                     <input type="hidden" name="notes" id="reject-notes">
                                                     <button type="button" class="btn btn-danger"
@@ -246,37 +263,7 @@
                     </div>
                     {% endif %}
 
-                    {% if submission.status == 'approved' and can_pay %}
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <div class="card border-warning">
-                                <div class="card-header bg-warning-subtle border-0 pb-3">
-                                    <h5 class="card-title mb-0"><i class="ri-secure-payment-line align-middle me-1"></i>
-                                        Finance Action</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row g-3">
-                                        <div class="col-lg-12">
-                                            <label class="form-label" for="payment-notes">Payment Notes</label>
-                                            <textarea class="form-control" id="payment-notes" rows="3"
-                                                placeholder="Optional notes for payment..."></textarea>
-                                        </div>
-                                        <div class="col-12">
-                                            <div class="d-flex gap-2 justify-content-end mt-2">
-                                                <form method="POST" action="/admin/submission/{{ submission.id }}/pay" id="pay-form">
-                                                    <input type="hidden" name="notes" id="pay-notes">
-                                                    <button type="button" class="btn btn-warning" onclick="submitPay()">
-                                                        <i class="ri-check-double-line align-bottom me-1"></i> Mark as Paid
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
+                    {# Finance action section not shown on approver UI #}
 
                     <div class="row">
                         <div class="col-xxl-3">
@@ -405,7 +392,7 @@
                                                 <div class="flex-grow-1 ms-2">
                                                     <h6 class="mb-1">{{ submission.reviewer.full_name if
                                                         submission.reviewer else '-' }}</h6>
-                                                    <p class="text-muted mb-0">Administrator</p>
+                                                    <p class="text-muted mb-0">{{ submission.reviewer.role | capitalize if submission.reviewer else '-' }}</p>
                                                 </div>
                                             </div>
                                         </li>
@@ -766,23 +753,7 @@
             });
         }
 
-        function submitPay() {
-            Swal.fire({
-                title: "Mark as Paid?",
-                text: "You can write optional finance notes before proceeding.",
-                icon: "warning",
-                showCancelButton: true,
-                confirmButtonColor: "#f7b84b",
-                cancelButtonColor: "#d33",
-                confirmButtonText: "Yes, Mark as Paid"
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const notes = document.getElementById('payment-notes').value;
-                    document.getElementById('pay-notes').value = notes;
-                    document.getElementById('pay-form').submit();
-                }
-            });
-        }
+        // submitPay is intentionally not present in the approver UI.
     </script>
 </body>
 

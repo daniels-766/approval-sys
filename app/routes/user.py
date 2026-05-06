@@ -11,10 +11,10 @@ templates = Jinja2Templates(directory="app/templates")
 
 
 def require_user(request: Request):
-    """Check if user is logged in and has 'user' role."""
+    """Check if user is logged in and can act as a requester (user/approver)."""
     user_id = request.session.get("user_id")
     role = request.session.get("role")
-    if not user_id or role != "user":
+    if not user_id or role not in ("user", "approver"):
         return None
     return user_id
 

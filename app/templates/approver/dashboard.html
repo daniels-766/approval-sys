@@ -23,7 +23,7 @@
                 <div class="navbar-header">
                     <div class="d-flex">
                         <div class="navbar-brand-box horizontal-logo">
-                            <a href="/user/dashboard" class="logo logo-dark">
+                            <a href="/approver/dashboard" class="logo logo-dark">
                                 <span class="logo-sm">
                                     <img src="/static/assets/images/logo-sm.png" alt="" height="22">
                                 </span>
@@ -31,7 +31,7 @@
                                     <img src="/static/assets/images/logo-dark.png" alt="" height="17">
                                 </span>
                             </a>
-                            <a href="/user/dashboard" class="logo logo-light">
+                            <a href="/approver/dashboard" class="logo logo-light">
                                 <span class="logo-sm">
                                     <img src="/static/assets/images/logo-sm.png" alt="" height="22">
                                 </span>
@@ -75,15 +75,15 @@
                                         </span>
                                     </span>
                                     <span class="text-start ms-xl-2">
-                                        <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">{{ session.get('full_name', 'User') }}</span>
-                                        <span class="d-none d-xl-block ms-1 fs-12 user-name-sub-text">User</span>
+                                        <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">{{ session.get('full_name', 'Approver') }}</span>
+                                        <span class="d-none d-xl-block ms-1 fs-12 user-name-sub-text">Approver</span>
                                     </span>
                                 </span>
                             </button>
                             <div class="dropdown-menu dropdown-menu-end">
                                 <h6 class="dropdown-header">Welcome {{ session.get('full_name', 'User') }}!</h6>
-                                <a class="dropdown-item" href="/user/dashboard"><i class="mdi mdi-view-dashboard text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Dashboard</span></a>
-                                <a class="dropdown-item" href="/user/profile"><i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Profile</span></a>
+                                <a class="dropdown-item" href="/approver/dashboard"><i class="mdi mdi-view-dashboard text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Dashboard</span></a>
+                                <a class="dropdown-item" href="/approver/profile"><i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Profile</span></a>
                                 <a class="dropdown-item" href="/logout"><i class="mdi mdi-logout text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Logout</span></a>
                             </div>
                         </div>
@@ -94,7 +94,7 @@
 
         <div class="app-menu navbar-menu">
             <div class="navbar-brand-box">
-                <a href="/user/dashboard" class="logo logo-dark">
+                <a href="/approver/dashboard" class="logo logo-dark">
                     <span class="logo-sm">
                         <img src="/static/assets/images/logo-sm.png" alt="" height="22">
                     </span>
@@ -102,7 +102,7 @@
                         <img src="/static/assets/images/logo-dark.png" alt="" height="17">
                     </span>
                 </a>
-                <a href="/user/dashboard" class="logo logo-light">
+                <a href="/approver/dashboard" class="logo logo-light">
                     <span class="logo-sm">
                         <img src="/static/assets/images/logo-sm.png" alt="" height="22">
                     </span>
@@ -121,12 +121,17 @@
                     <ul class="navbar-nav" id="navbar-nav">
                         <li class="menu-title"><span data-key="t-menu">Menu</span></li>
                         <li class="nav-item">
-                            <a class="nav-link menu-link active" href="/user/dashboard">
-                                <i class="ri-dashboard-2-line"></i> <span>My Submissions</span>
+                            <a class="nav-link menu-link active" href="/approver/dashboard">
+                                <i class="ri-dashboard-2-line"></i> <span>My Requests</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link menu-link" href="/user/profile">
+                            <a class="nav-link menu-link" href="/approver/approvals">
+                                <i class="ri-shield-check-line"></i> <span>Approvals</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="/approver/profile">
                                 <i class="ri-account-circle-line"></i> <span>Profile</span>
                             </a>
                         </li>
@@ -152,7 +157,7 @@
                                 <h4 class="mb-sm-0">Tasks List</h4>
                                 <div class="page-title-right">
                                     <ol class="breadcrumb m-0">
-                                        <li class="breadcrumb-item"><a href="/user/dashboard">Tasks</a></li>
+                                        <li class="breadcrumb-item"><a href="/approver/dashboard">Approver</a></li>
                                         <li class="breadcrumb-item active">Tasks List</li>
                                     </ol>
                                 </div>
@@ -219,34 +224,14 @@
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between">
                                         <div>
-                                            <p class="fw-medium text-muted mb-0">Approved</p>
+                                            <p class="fw-medium text-muted mb-0">Completed Tasks</p>
                                             <h2 class="mt-4 ff-secondary fw-semibold">{{ stats.approved }}</h2>
-                                            <p class="mb-0 text-muted">Waiting for payment</p>
+                                            <p class="mb-0 text-muted">Approved submissions</p>
                                         </div>
                                         <div>
                                             <div class="avatar-sm flex-shrink-0">
                                                 <span class="avatar-title bg-success-subtle text-success rounded-circle fs-4">
                                                     <i class="ri-checkbox-circle-line"></i>
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-xxl-3 col-sm-6">
-                            <div class="card card-animate">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between">
-                                        <div>
-                                            <p class="fw-medium text-muted mb-0">Paid</p>
-                                            <h2 class="mt-4 ff-secondary fw-semibold">{{ stats.paid }}</h2>
-                                            <p class="mb-0 text-muted">Payment completed</p>
-                                        </div>
-                                        <div>
-                                            <div class="avatar-sm flex-shrink-0">
-                                                <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-4">
-                                                    <i class="ri-secure-payment-line"></i>
                                                 </span>
                                             </div>
                                         </div>
@@ -308,7 +293,6 @@
                                                         <option value="pending">Pending</option>
                                                         <option value="need_revision">Need Revision</option>
                                                         <option value="approved">Approved</option>
-                                                        <option value="paid">Paid</option>
                                                         <option value="rejected">Rejected</option>
                                                     </select>
                                                 </div>
@@ -362,8 +346,6 @@
                                                         <span class="badge bg-warning-subtle text-warning text-uppercase">Pending</span>
                                                         {% elif sub.status == 'approved' %}
                                                         <span class="badge bg-success-subtle text-success text-uppercase">Approved</span>
-                                                        {% elif sub.status == 'paid' %}
-                                                        <span class="badge bg-primary-subtle text-primary text-uppercase">Paid</span>
                                                         {% elif sub.status == 'rejected' %}
                                                         <span class="badge bg-danger-subtle text-danger text-uppercase">Rejected</span>
                                                         {% else %}
@@ -413,7 +395,7 @@
                                     <h5 class="modal-title" id="exampleModalLabel">Create Request</h5>
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
-                                <form method="POST" action="/user/submission/create" enctype="multipart/form-data" autocomplete="off">
+                                <form method="POST" action="/approver/submission/create" enctype="multipart/form-data" autocomplete="off">
                                     <div class="modal-body">
                                         <div class="row g-3">
                                             <div class="col-lg-12">

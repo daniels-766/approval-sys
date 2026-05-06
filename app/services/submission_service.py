@@ -12,18 +12,20 @@ from fastapi import UploadFile
 from app.models.category import Category
 from app.models.division import Division
 from app.models.submission import Submission, SubmissionAttachment, SubmissionAudit
+from app.models.approval_step import ApprovalStep
 from app.models.user import User
 from app.config import settings
 from app.services import notification_service
+from app.utils.time_utils import get_now_naive
 
 
-VALID_STATUSES = ("pending", "need_revision", "approved", "rejected")
+VALID_STATUSES = ("pending", "need_revision", "approved", "rejected", "paid")
 # test
 
 
 def _generate_submission_code(db: Session) -> str:
     """Generate a unique submission code like SUB-20260427-001."""
-    today = datetime.utcnow().strftime("%Y%m%d")
+    today = get_now_naive().strftime("%Y%m%d")
     prefix = f"SUB-{today}-"
 
     # Find the last submission code for today
@@ -82,6 +84,7 @@ def _add_audit(
     status_from: str | None,
     status_to: str | None,
     actor_id: int | None = None,
+    step_no: int | None = None,
     notes: str | None = None,
 ) -> SubmissionAudit:
     audit = SubmissionAudit(
@@ -90,10 +93,81 @@ def _add_audit(
         action=action,
         status_from=status_from,
         status_to=status_to,
+        step_no=step_no,
         notes=notes,
     )
     db.add(audit)
     return audit
+
+
+def get_approval_steps_for_category(db: Session, category_id: int) -> list[ApprovalStep]:
+    return (
+        db.query(ApprovalStep)
+        .filter(ApprovalStep.category_id == category_id)
+        .order_by(ApprovalStep.step_no.asc())
+        .all()
+    )
+
+
+def get_total_steps_for_submission(db: Session, submission: Submission) -> int:
+    # Special routing requested:
+    # - If requester is a "user": only "approver" approves (single-step).
+    # - If requester is an "approver": "admin" approves (single-step).
+    # This keeps the workflow predictable and prevents self-approval loops.
+    try:
+        requester_role = submission.user.role if submission.user else None
+    except Exception:
+        requester_role = None
+    if requester_role in ("user", "approver"):
+        return 1
+
+    steps = get_approval_steps_for_category(db, submission.category_id)
+    return len(steps) if steps else 1
+
+
+def get_required_role_for_submission_step(db: Session, submission: Submission) -> str:
+    # Special routing requested:
+    # - requester "user"  -> required approver role is "approver"
+    # - requester "approver" -> required approver role is "admin"
+    # This overrides category-based workflow.
+    requester_role = None
+    if submission.user:
+        requester_role = submission.user.role
+    else:
+        requester = db.query(User).filter(User.id == submission.user_id).first()
+        requester_role = requester.role if requester else None
+
+    if requester_role == "user":
+        return "approver"
+    if requester_role == "approver":
+        return "admin"
+
+    steps = get_approval_steps_for_category(db, submission.category_id)
+    if not steps:
+        return "admin"
+    for step in steps:
+        if step.step_no == submission.current_step:
+            return step.required_role
+    # If config is incomplete, default to admin for safety.
+    return "admin"
+
+
+def can_user_act_on_submission(db: Session, submission: Submission, actor: User, action: str) -> bool:
+    """
+    Staff actions:
+      - approve/reject/revision: only when submission.status == 'pending'
+      - pay: only when status == 'approved'
+    """
+    if action in ("approve", "reject", "revision"):
+        if submission.status != "pending":
+            return False
+        required = get_required_role_for_submission_step(db, submission)
+        if actor.role == "admin":
+            return True
+        return actor.role == required
+    if action == "pay":
+        return actor.role in ("finance", "admin") and submission.status == "approved"
+    return False
 
 
 def create_submission(
@@ -123,21 +197,42 @@ def create_submission(
         document_original_name=document_original_name,
     )
     submission.attachments = [
-        SubmissionAttachment(file_path=file_path, original_name=original_name)
+        SubmissionAttachment(
+            file_path=file_path,
+            original_name=original_name,
+            kind="submission",
+        )
         for file_path, original_name in attachment_pairs
     ]
     db.add(submission)
-    _add_audit(db, submission, "created", None, "pending", actor_id=user_id)
+    _add_audit(db, submission, "created", None, "pending", actor_id=user_id, step_no=1)
     db.commit()
     db.refresh(submission)
     
-    # Notify Admins
-    notification_service.notify_all_admins(
+    # Notify the correct reviewer based on requester role.
+    required_role = get_required_role_for_submission_step(db, submission)
+    review_link = "/admin/submission/{0}".format(submission.id)
+    if required_role == "approver":
+        review_link = "/approver/submission/{0}".format(submission.id)
+    notification_service.notify_roles(
         db,
+        roles=(required_role,) if required_role == "admin" else (required_role, "admin"),
         title="New Submission",
         message=f"{submission.user.full_name} has created a new submission: {submission.name}",
-        link=f"/admin/submission/{submission.id}",
-        type="info"
+        link=review_link,
+        type="info",
+        submission_code=submission.submission_code,
+    )
+
+    # Email confirmation for the requester.
+    notification_service.create_notification_with_email(
+        db,
+        user_id=submission.user_id,
+        title="Request Submitted",
+        message=f"Your request {submission.submission_code} has been submitted successfully.",
+        link=f"/user/submission/{submission.id}",
+        type="success",
+        submission_code=submission.submission_code,
     )
     
     return submission
@@ -205,27 +300,105 @@ def get_submission_by_id(db: Session, submission_id: int) -> Submission | None:
 def approve_submission(
     db: Session, submission_id: int, admin_id: int, notes: str | None = None
 ) -> Submission | None:
-    """Approve a submission."""
+    """Approve a submission (multi-step)."""
     submission = get_submission_by_id(db, submission_id)
-    if not submission or submission.status not in ("pending", "need_revision"):
+    actor = db.query(User).filter(User.id == admin_id).first()
+    if not submission or not actor or not can_user_act_on_submission(db, submission, actor, "approve"):
         return None
+
     previous_status = submission.status
-    submission.status = "approved"
+    current_step = submission.current_step
+    total_steps = get_total_steps_for_submission(db, submission)
+
     submission.reviewed_by = admin_id
-    submission.reviewed_at = datetime.utcnow()
+    submission.reviewed_at = get_now_naive()
     submission.admin_notes = notes
-    _add_audit(db, submission, "approved", previous_status, "approved", admin_id, notes)
+
+    if current_step < total_steps:
+        # Move forward to next step, still pending overall.
+        submission.current_step = current_step + 1
+        submission.status = "pending"
+        _add_audit(
+            db,
+            submission,
+            "approved_step",
+            previous_status,
+            "pending",
+            actor_id=admin_id,
+            step_no=current_step,
+            notes=notes,
+        )
+        db.commit()
+        db.refresh(submission)
+
+        # Notify next reviewers based on required role for next step.
+        next_required = get_required_role_for_submission_step(db, submission)
+        next_link = "/admin/submission/{0}".format(submission.id)
+        if next_required == "approver":
+            next_link = "/approver/submission/{0}".format(submission.id)
+        notification_service.notify_roles(
+            db,
+            roles=(next_required, "admin") if next_required != "admin" else ("admin",),
+            title="Submission Needs Review",
+            message=f"{submission.submission_code} is ready for step {submission.current_step} review.",
+            link=next_link,
+            type="info",
+            submission_code=submission.submission_code,
+        )
+        return submission
+
+    # Final approval
+    submission.status = "approved"
+    _add_audit(
+        db,
+        submission,
+        "approved_final",
+        previous_status,
+        "approved",
+        actor_id=admin_id,
+        step_no=current_step,
+        notes=notes,
+    )
+    # Add an explicit "waiting for payment" milestone for the timeline, once.
+    existing_wait = (
+        db.query(SubmissionAudit)
+        .filter(SubmissionAudit.submission_id == submission.id, SubmissionAudit.action == "waiting_payment")
+        .first()
+    )
+    if not existing_wait:
+        _add_audit(
+            db,
+            submission,
+            "waiting_payment",
+            "approved",
+            "approved",
+            actor_id=None,
+            step_no=None,
+            notes="Waiting for payment",
+        )
     db.commit()
     db.refresh(submission)
 
     # Notify User
-    notification_service.create_notification(
+    notification_service.create_notification_with_email(
         db,
         user_id=submission.user_id,
         title="Submission Approved",
         message=f"Your submission {submission.submission_code} has been approved.",
         link=f"/user/submission/{submission.id}",
-        type="success"
+        type="success",
+        submission_code=submission.submission_code,
+    )
+
+    # Notify Finance that payment can be processed.
+    notification_service.notify_roles(
+        db,
+        roles=("finance",),
+        title="Payment Needed",
+        message=f"{submission.submission_code} has been approved and is ready for payment.",
+        link=f"/finance/submission/{submission.id}",
+        type="warning",
+        submission_code=submission.submission_code,
     )
     return submission
 
@@ -233,27 +406,38 @@ def approve_submission(
 def reject_submission(
     db: Session, submission_id: int, admin_id: int, notes: str | None = None
 ) -> Submission | None:
-    """Reject a submission."""
+    """Reject a submission (at current step)."""
     submission = get_submission_by_id(db, submission_id)
-    if not submission or submission.status not in ("pending", "need_revision"):
+    actor = db.query(User).filter(User.id == admin_id).first()
+    if not submission or not actor or not can_user_act_on_submission(db, submission, actor, "reject"):
         return None
     previous_status = submission.status
     submission.status = "rejected"
     submission.reviewed_by = admin_id
-    submission.reviewed_at = datetime.utcnow()
+    submission.reviewed_at = get_now_naive()
     submission.admin_notes = notes
-    _add_audit(db, submission, "rejected", previous_status, "rejected", admin_id, notes)
+    _add_audit(
+        db,
+        submission,
+        "rejected",
+        previous_status,
+        "rejected",
+        actor_id=admin_id,
+        step_no=submission.current_step,
+        notes=notes,
+    )
     db.commit()
     db.refresh(submission)
 
     # Notify User
-    notification_service.create_notification(
+    notification_service.create_notification_with_email(
         db,
         user_id=submission.user_id,
         title="Submission Rejected",
         message=f"Your submission {submission.submission_code} has been rejected.",
         link=f"/user/submission/{submission.id}",
-        type="danger"
+        type="danger",
+        submission_code=submission.submission_code,
     )
     return submission
 
@@ -263,12 +447,13 @@ def request_revision_submission(
 ) -> Submission | None:
     """Ask the submitter to revise a pending submission."""
     submission = get_submission_by_id(db, submission_id)
-    if not submission or submission.status != "pending":
+    actor = db.query(User).filter(User.id == admin_id).first()
+    if not submission or not actor or not can_user_act_on_submission(db, submission, actor, "revision"):
         return None
     previous_status = submission.status
     submission.status = "need_revision"
     submission.reviewed_by = admin_id
-    submission.reviewed_at = datetime.utcnow()
+    submission.reviewed_at = get_now_naive()
     submission.admin_notes = notes
     _add_audit(
         db,
@@ -276,20 +461,22 @@ def request_revision_submission(
         "need_revision",
         previous_status,
         "need_revision",
-        admin_id,
-        notes,
+        actor_id=admin_id,
+        step_no=submission.current_step,
+        notes=notes,
     )
     db.commit()
     db.refresh(submission)
 
     # Notify User
-    notification_service.create_notification(
+    notification_service.create_notification_with_email(
         db,
         user_id=submission.user_id,
         title="Revision Requested",
         message=f"Admin requested a revision for {submission.submission_code}.",
         link=f"/user/submission/{submission.id}",
-        type="warning"
+        type="warning",
+        submission_code=submission.submission_code,
     )
     return submission
 
@@ -319,12 +506,17 @@ def revise_submission(
     submission.nominal = nominal
     submission.category_id = category_id
     submission.status = "pending"
+    submission.current_step = 1
     submission.reviewed_by = None
     submission.reviewed_at = None
     submission.admin_notes = None
     for file_path, original_name in attachments or []:
         submission.attachments.append(
-            SubmissionAttachment(file_path=file_path, original_name=original_name)
+            SubmissionAttachment(
+                file_path=file_path,
+                original_name=original_name,
+                kind="submission",
+            )
         )
     _add_audit(
         db,
@@ -333,18 +525,77 @@ def revise_submission(
         previous_status,
         "pending",
         actor_id=user_id,
+        step_no=1,
         notes="User submitted revisions",
     )
     db.commit()
     db.refresh(submission)
 
-    # Notify Admins
-    notification_service.notify_all_admins(
+    # Notify the correct reviewer based on requester role.
+    required_role = get_required_role_for_submission_step(db, submission)
+    review_link = "/admin/submission/{0}".format(submission.id)
+    if required_role == "approver":
+        review_link = "/approver/submission/{0}".format(submission.id)
+    notification_service.notify_roles(
         db,
+        roles=(required_role,) if required_role == "admin" else (required_role, "admin"),
         title="Submission Revised",
         message=f"{submission.user.full_name} has submitted a revision for {submission.submission_code}",
-        link=f"/admin/submission/{submission.id}",
-        type="info"
+        link=review_link,
+        type="info",
+        submission_code=submission.submission_code,
+    )
+    return submission
+
+
+def pay_submission(
+    db: Session,
+    submission_id: int,
+    actor_id: int,
+    notes: str | None = None,
+    attachments: list[tuple[str, str]] | None = None,
+) -> Submission | None:
+    """Mark an approved submission as paid (finance action)."""
+    submission = get_submission_by_id(db, submission_id)
+    actor = db.query(User).filter(User.id == actor_id).first()
+    if not submission or not actor or not can_user_act_on_submission(db, submission, actor, "pay"):
+        return None
+
+    previous_status = submission.status
+    submission.status = "paid"
+    submission.paid_by = actor_id
+    submission.paid_at = get_now_naive()
+    submission.payment_notes = notes
+    for file_path, original_name in attachments or []:
+        submission.attachments.append(
+            SubmissionAttachment(
+                file_path=file_path,
+                original_name=original_name,
+                kind="payment",
+            )
+        )
+
+    _add_audit(
+        db,
+        submission,
+        "paid",
+        previous_status,
+        "paid",
+        actor_id=actor_id,
+        step_no=None,
+        notes=notes,
+    )
+    db.commit()
+    db.refresh(submission)
+
+    notification_service.create_notification_with_email(
+        db,
+        user_id=submission.user_id,
+        title="Payment Completed",
+        message=f"Finance has marked {submission.submission_code} as paid.",
+        link=f"/user/submission/{submission.id}",
+        type="success",
+        submission_code=submission.submission_code,
     )
     return submission
 
@@ -376,12 +627,19 @@ def get_submission_stats(db: Session) -> dict:
         .scalar()
         or 0
     )
+    paid = (
+        db.query(func.count(Submission.id))
+        .filter(Submission.status == "paid")
+        .scalar()
+        or 0
+    )
     return {
         "total": total,
         "pending": pending,
         "need_revision": need_revision,
         "approved": approved,
         "rejected": rejected,
+        "paid": paid,
     }
 
 
@@ -394,6 +652,7 @@ def get_user_submission_stats(db: Session, user_id: int) -> dict:
         "need_revision": query.filter(Submission.status == "need_revision").count(),
         "approved": query.filter(Submission.status == "approved").count(),
         "rejected": query.filter(Submission.status == "rejected").count(),
+        "paid": query.filter(Submission.status == "paid").count(),
     }
 
 

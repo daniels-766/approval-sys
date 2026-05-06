@@ -2,6 +2,7 @@ from datetime import datetime
 from sqlalchemy import String, Text, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
+from app.utils.time_utils import get_now_naive
 
 
 class Notification(Base):
@@ -14,7 +15,7 @@ class Notification(Base):
     link: Mapped[str | None] = mapped_column(String(500), nullable=True)
     type: Mapped[str] = mapped_column(String(50), default="info", server_default="info") # info, success, warning, danger
     is_read: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0", index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=get_now_naive, index=True)
 
     # Relationships
     user = relationship("User", backref="notifications")

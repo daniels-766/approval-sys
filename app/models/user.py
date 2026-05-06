@@ -2,6 +2,7 @@ from datetime import datetime
 from sqlalchemy import String, Boolean, DateTime, Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
+from app.utils.time_utils import get_now_naive
 
 
 class User(Base):
@@ -13,7 +14,7 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(100), nullable=False)
     role: Mapped[str] = mapped_column(
-        SAEnum("user", "admin", name="user_role"),
+        SAEnum("user", "approver", "admin", "finance", name="user_role"),
         default="user",
         server_default="user",
         index=True,
@@ -21,9 +22,9 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(
         Boolean, default=True, server_default="1", index=True
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=get_now_naive)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime, default=get_now_naive, onupdate=get_now_naive
     )
 
     # Relationships

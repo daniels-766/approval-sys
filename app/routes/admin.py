@@ -21,6 +21,15 @@ def require_admin(request: Request):
     return user_id
 
 
+def require_staff(request: Request):
+    """Check if user is logged in and has a staff role (approver/admin/finance)."""
+    user_id = request.session.get("user_id")
+    role = request.session.get("role")
+    if not user_id or role not in ("approver", "admin", "finance"):
+        return None
+    return user_id
+
+
 def _parse_int(value: str | None) -> int | None:
     if not value:
         return None
@@ -69,6 +78,7 @@ async def admin_dashboard(
     parsed_date_to = _parse_date(date_to)
     parsed_min_nominal = _parse_decimal(min_nominal)
     parsed_max_nominal = _parse_decimal(max_nominal)
+    staff_user = auth_service.get_user_by_id(db, admin_id)
     stats = submission_service.get_submission_stats(db)
     submissions = submission_service.get_all_submissions(
         db,
@@ -82,6 +92,23 @@ async def admin_dashboard(
         min_nominal=parsed_min_nominal,
         max_nominal=parsed_max_nominal,
     )
+
+    # Staff scoping:
+    # - admin sees everything
+    # - approver sees only submissions they can act on at current step
+    # - finance sees only approved/paid submissions (payment-related)
+    if staff_user and staff_user.role == "approver":
+        submissions = [
+            s
+            for s in submissions
+            if submission_service.can_user_act_on_submission(db, s, staff_user, "approve")
+            or submission_service.can_user_act_on_submission(db, s, staff_user, "reject")
+            or submission_service.can_user_act_on_submission(db, s, staff_user, "revision")
+        ]
+    elif staff_user and staff_user.role == "finance":
+        submissions = [s for s in submissions if s.status in ("approved", "paid")]
+    # Admin dashboard is meant to approve requests submitted by approvers only.
+    submissions = [s for s in submissions if s.user and s.user.role == "approver"]
     categories = category_service.get_all_categories(db)
     divisions = division_service.get_all_divisions(db)
     users = (
@@ -199,10 +226,31 @@ async def review_submission(
     # Notifications
     notifications = notification_service.get_unread_notifications(db, admin_id)
 
+    staff_user = auth_service.get_user_by_id(db, admin_id)
+    can_approve = bool(staff_user and submission_service.can_user_act_on_submission(db, submission, staff_user, "approve"))
+    can_reject = bool(staff_user and submission_service.can_user_act_on_submission(db, submission, staff_user, "reject"))
+    can_revision = bool(staff_user and submission_service.can_user_act_on_submission(db, submission, staff_user, "revision"))
+    can_pay = bool(staff_user and submission_service.can_user_act_on_submission(db, submission, staff_user, "pay"))
+
+    required_role = submission_service.get_required_role_for_submission_step(db, submission)
+    total_steps = submission_service.get_total_steps_for_submission(db, submission)
+
+    error = request.query_params.get("error")
+    error_msg = None
+    if error == "not_allowed":
+        error_msg = "You are not allowed to perform that action for the current approval step."
+
     return templates.TemplateResponse("admin/review.html", {
         "request": request,
         "submission": submission,
         "notifications": notifications,
+        "error": error_msg,
+        "can_approve": can_approve,
+        "can_reject": can_reject,
+        "can_revision": can_revision,
+        "can_pay": can_pay,
+        "required_role": required_role,
+        "total_steps": total_steps,
         "session": request.session,
     })
 
@@ -219,7 +267,9 @@ async def approve_submission(
     if not admin_id:
         return RedirectResponse(url="/login", status_code=302)
 
-    submission_service.approve_submission(db, submission_id, admin_id, notes.strip() or None)
+    updated = submission_service.approve_submission(db, submission_id, admin_id, notes.strip() or None)
+    if not updated:
+        return RedirectResponse(url=f"/admin/submission/{submission_id}?error=not_allowed", status_code=302)
     return RedirectResponse(url="/admin/dashboard?approved=1", status_code=302)
 
 
@@ -235,7 +285,9 @@ async def reject_submission(
     if not admin_id:
         return RedirectResponse(url="/login", status_code=302)
 
-    submission_service.reject_submission(db, submission_id, admin_id, notes.strip() or None)
+    updated = submission_service.reject_submission(db, submission_id, admin_id, notes.strip() or None)
+    if not updated:
+        return RedirectResponse(url=f"/admin/submission/{submission_id}?error=not_allowed", status_code=302)
     return RedirectResponse(url="/admin/dashboard?rejected=1", status_code=302)
 
 
@@ -251,10 +303,30 @@ async def request_revision(
     if not admin_id:
         return RedirectResponse(url="/login", status_code=302)
 
-    submission_service.request_revision_submission(
+    updated = submission_service.request_revision_submission(
         db, submission_id, admin_id, notes.strip() or None
     )
+    if not updated:
+        return RedirectResponse(url=f"/admin/submission/{submission_id}?error=not_allowed", status_code=302)
     return RedirectResponse(url="/admin/dashboard?revision=1", status_code=302)
+
+
+@router.post("/submission/{submission_id}/pay")
+async def pay_submission(
+    request: Request,
+    submission_id: int,
+    notes: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    """Mark an approved submission as paid (finance)."""
+    admin_id = require_admin(request)
+    if not admin_id:
+        return RedirectResponse(url="/login", status_code=302)
+
+    updated = submission_service.pay_submission(db, submission_id, admin_id, notes.strip() or None)
+    if not updated:
+        return RedirectResponse(url=f"/admin/submission/{submission_id}?error=not_allowed", status_code=302)
+    return RedirectResponse(url="/admin/dashboard?paid=1", status_code=302)
 
 
 @router.post("/submission/{submission_id}/delete")
