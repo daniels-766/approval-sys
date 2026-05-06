@@ -403,6 +403,13 @@ async def create_admin_user(
     if auth_service.get_user_by_email(db, email.strip()):
         return RedirectResponse(url="/admin/users?error=email", status_code=302)
 
+    form_data = await request.form()
+    division_ids = form_data.getlist("division_ids")
+    division_roles = {}
+    for div_id in division_ids:
+        div_role = form_data.get(f"role_{div_id}", "user")
+        division_roles[int(div_id)] = div_role
+
     user = auth_service.create_user(
         db,
         username=username.strip(),
@@ -410,16 +417,7 @@ async def create_admin_user(
         password=password,
         full_name=full_name.strip(),
         role=role,
-    )
-    auth_service.update_user(
-        db,
-        user.id,
-        username=user.username,
-        email=user.email,
-        full_name=user.full_name,
-        role=user.role,
-        is_active=user.is_active,
-        division_ids=division_ids,
+        division_roles=division_roles
     )
     return RedirectResponse(url="/admin/users?created=1", status_code=302)
 
@@ -447,6 +445,13 @@ async def update_admin_user(
     existing_email = auth_service.get_user_by_email(db, email.strip())
     if existing_email and existing_email.id != user_id:
         return RedirectResponse(url="/admin/users?error=email", status_code=302)
+    form_data = await request.form()
+    division_ids = form_data.getlist("division_ids")
+    division_roles = {}
+    for div_id in division_ids:
+        div_role = form_data.get(f"role_{div_id}", "user")
+        division_roles[int(div_id)] = div_role
+
     auth_service.update_user(
         db,
         user_id,
@@ -455,7 +460,7 @@ async def update_admin_user(
         full_name=full_name.strip(),
         role=role,
         is_active=_parse_bool(is_active),
-        division_ids=division_ids,
+        division_roles=division_roles,
     )
     return RedirectResponse(url="/admin/users?updated=1", status_code=302)
 
@@ -480,7 +485,7 @@ async def toggle_admin_user(
             full_name=user.full_name,
             role=user.role,
             is_active=not user.is_active,
-            division_ids=[division.id for division in user.divisions],
+            division_roles={assoc.division_id: assoc.role for assoc in user.division_associations},
         )
     return RedirectResponse(url="/admin/users", status_code=302)
 
@@ -512,12 +517,14 @@ async def categories_page(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse(url="/login", status_code=302)
 
     categories = category_service.get_all_categories(db)
+    divisions = division_service.get_all_divisions(db, active_only=True)
     # Notifications
     notifications = notification_service.get_unread_notifications(db, admin_id)
 
     return templates.TemplateResponse("admin/categories.html", {
         "request": request,
         "categories": categories,
+        "divisions": divisions,
         "notifications": notifications,
         "session": request.session,
     })
@@ -528,6 +535,7 @@ async def create_category(
     request: Request,
     name: str = Form(...),
     description: str = Form(""),
+    division_id: int | None = Form(None),
     db: Session = Depends(get_db),
 ):
     """Create a new category."""
@@ -536,7 +544,7 @@ async def create_category(
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
 
     try:
-        category_service.create_category(db, name.strip(), description.strip() or None)
+        category_service.create_category(db, name.strip(), description.strip() or None, division_id=division_id)
         return RedirectResponse(url="/admin/categories?created=1", status_code=302)
     except Exception:
         return RedirectResponse(url="/admin/categories?error=duplicate", status_code=302)
@@ -548,6 +556,7 @@ async def update_category(
     category_id: int,
     name: str = Form(...),
     description: str = Form(""),
+    division_id: int | None = Form(None),
     db: Session = Depends(get_db),
 ):
     """Update a category."""
@@ -556,7 +565,7 @@ async def update_category(
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
 
     category_service.update_category(
-        db, category_id, name=name.strip(), description=description.strip() or None
+        db, category_id, name=name.strip(), description=description.strip() or None, division_id=division_id
     )
     return RedirectResponse(url="/admin/categories?updated=1", status_code=302)
 

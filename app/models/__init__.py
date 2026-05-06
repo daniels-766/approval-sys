@@ -1,4 +1,4 @@
-from app.models.division import Division, user_divisions
+from app.models.division import Division, UserDivision
 from app.models.user import User
 from app.models.category import Category
 from app.models.submission import Submission, SubmissionAttachment, SubmissionAudit
@@ -13,6 +13,6 @@ __all__ = [
     "SubmissionAudit",
     "ApprovalStep",
     "Division",
-    "user_divisions",
+    "UserDivision",
     "Notification",
 ]

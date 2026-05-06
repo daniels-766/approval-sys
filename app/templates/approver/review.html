@@ -126,11 +126,21 @@
                     <ul class="navbar-nav" id="navbar-nav">
                         <li class="menu-title"><span data-key="t-menu">Menu</span></li>
                         <li class="nav-item">
+                            {% if session.get('role') == 'approver' %}
                             <a class="nav-link menu-link" href="/approver/dashboard">
                                 <i class="ri-dashboard-2-line"></i> <span>Dashboard</span>
                             </a>
+                            {% elif session.get('role') == 'user' %}
+                            <a class="nav-link menu-link" href="/user/dashboard">
+                                <i class="ri-dashboard-2-line"></i> <span>My Submissions</span>
+                            </a>
+                            {% else %}
+                            <a class="nav-link menu-link" href="/{{ session.get('role') }}/dashboard">
+                                <i class="ri-dashboard-2-line"></i> <span>Dashboard</span>
+                            </a>
+                            {% endif %}
                         </li>
-                        {% if session.get('role') in ['approver', 'admin'] %}
+                        {% if session.get('role') in ['approver', 'admin'] or session.get('is_approver') %}
                         <li class="nav-item">
                             <a class="nav-link menu-link" href="/approver/approvals?status=pending">
                                 <i class="ri-shield-check-line"></i> <span>Approvals</span>
@@ -138,13 +148,6 @@
                         </li>
                         {% endif %}
                         {# Payments handled by finance role #}
-                        {% if session.get('role') == 'approver' %}
-                        <li class="nav-item">
-                            <a class="nav-link menu-link" href="/user/dashboard">
-                                <i class="ri-file-list-3-line"></i> <span>My Requests</span>
-                            </a>
-                        </li>
-                        {% endif %}
                         {% if session.get('role') == 'admin' %}
                         <li class="nav-item">
                             <a class="nav-link menu-link" href="/admin/statistics">

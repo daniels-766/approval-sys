@@ -16,6 +16,7 @@ class Submission(Base):
     purpose: Mapped[str] = mapped_column(Text, nullable=False)
     nominal: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"), nullable=False, index=True)
+    division_id: Mapped[int | None] = mapped_column(ForeignKey("divisions.id"), nullable=True, index=True)
     document_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     document_original_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[str] = mapped_column(
@@ -52,6 +53,7 @@ class Submission(Base):
     )
     payer = relationship("User", foreign_keys=[paid_by])
     category = relationship("Category", back_populates="submissions")
+    division = relationship("Division")
     attachments = relationship(
         "SubmissionAttachment",
         back_populates="submission",

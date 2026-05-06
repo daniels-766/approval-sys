@@ -238,6 +238,7 @@
                                             <thead class="table-active">
                                                 <tr>
                                                     <th scope="col">Category Name</th>
+                                                    <th scope="col">Division</th>
                                                     <th scope="col">Description</th>
                                                     <th scope="col">Status</th>
                                                     <th scope="col">Created Date</th>
@@ -255,6 +256,13 @@
                                                             </div>
                                                         </div>
                                                     </td>
+                                                     <td>
+                                                         {% if cat.division %}
+                                                         <span class="badge bg-info-subtle text-info">{{ cat.division.name }}</span>
+                                                         {% else %}
+                                                         <span class="text-muted">-</span>
+                                                         {% endif %}
+                                                     </td>
                                                     <td class="text-muted">{{ cat.description or '-' }}</td>
                                                     <td>
                                                         {% if cat.is_active %}
@@ -267,7 +275,7 @@
                                                     <td>
                                                         <div class="hstack gap-2">
                                                             <button class="btn btn-sm btn-soft-info edit-list" data-bs-toggle="modal" data-bs-target="#editCategoryModal" 
-                                                                    data-id="{{ cat.id }}" data-name="{{ cat.name }}" data-description="{{ cat.description or '' }}">
+                                                                    data-id="{{ cat.id }}" data-name="{{ cat.name }}" data-description="{{ cat.description or '' }}" data-division-id="{{ cat.division_id or '' }}">
                                                                 <i class="ri-pencil-fill align-bottom"></i>
                                                             </button>
                                                             <form method="POST" action="/admin/categories/{{ cat.id }}/toggle" class="d-inline">
@@ -326,6 +334,15 @@
                             <input type="text" id="cat-name" name="name" class="form-control" placeholder="Enter category name" required>
                         </div>
                         <div class="mb-3">
+                            <label for="cat-division" class="form-label">Division</label>
+                            <select id="cat-division" name="division_id" class="form-select">
+                                <option value="">-- No Division --</option>
+                                {% for div in divisions %}
+                                <option value="{{ div.id }}">{{ div.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
                             <label for="cat-description" class="form-label">Description</label>
                             <textarea id="cat-description" name="description" class="form-control" rows="3" placeholder="Enter description"></textarea>
                         </div>
@@ -352,6 +369,15 @@
                         <div class="mb-3">
                             <label for="edit-cat-name" class="form-label">Category Name *</label>
                             <input type="text" id="edit-cat-name" name="name" class="form-control" placeholder="Enter category name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-cat-division" class="form-label">Division</label>
+                            <select id="edit-cat-division" name="division_id" class="form-select">
+                                <option value="">-- No Division --</option>
+                                {% for div in divisions %}
+                                <option value="{{ div.id }}">{{ div.name }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div class="mb-3">
                             <label for="edit-cat-description" class="form-label">Description</label>
@@ -389,16 +415,19 @@
         const editForm = document.getElementById('edit-category-form');
         const editNameInput = document.getElementById('edit-cat-name');
         const editDescInput = document.getElementById('edit-cat-description');
-
+        const editDivisionSelect = document.getElementById('edit-cat-division');
+ 
         editButtons.forEach(btn => {
             btn.addEventListener('click', function() {
                 const id = this.getAttribute('data-id');
                 const name = this.getAttribute('data-name');
                 const desc = this.getAttribute('data-description');
-
+                const divisionId = this.getAttribute('data-division-id');
+ 
                 editForm.action = `/admin/categories/${id}/update`;
                 editNameInput.value = name;
                 editDescInput.value = desc;
+                editDivisionSelect.value = divisionId || "";
             });
         });
 

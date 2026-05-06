@@ -19,16 +19,24 @@
 
     <style>
         .checkbox-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 10px;
-            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
             border: 1px solid #e9ebec;
             border-radius: 4px;
-            max-height: 200px;
-            overflow-y: auto;
+        }
+        .div-role-select:disabled {
+            background-color: #f3f6f9;
+            opacity: 0.6;
         }
     </style>
+    <script>
+        function toggleRoleSelect(checkbox, selectId) {
+            const select = document.getElementById(selectId);
+            if (select) {
+                select.disabled = !checkbox.checked;
+            }
+        }
+    </script>
 </head>
 
 <body>
@@ -456,19 +464,43 @@
                                                                 </select>
                                                             </div>
                                                             <div class="col-lg-12">
-                                                                <label class="form-label">Divisions</label>
+                                                                <label class="form-label">Divisions & Roles</label>
                                                                 <div class="checkbox-grid">
-                                                                    {% for div in divisions %}
-                                                                    <div class="form-check">
-                                                                        <input class="form-check-input" type="checkbox"
-                                                                            name="division_ids" value="{{ div.id }}"
-                                                                            id="div-{{ div.id }}">
-                                                                        <label class="form-check-label"
-                                                                            for="div-{{ div.id }}">
-                                                                            {{ div.name }}
-                                                                        </label>
+                                                                    <div class="table-responsive">
+                                                                        <table class="table table-sm table-borderless align-middle mb-0">
+                                                                            <thead>
+                                                                                <tr>
+                                                                                    <th style="width: 40px;"></th>
+                                                                                    <th>Division</th>
+                                                                                    <th>Role in Division</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                {% for div in divisions %}
+                                                                                <tr>
+                                                                                    <td>
+                                                                                        <input class="form-check-input" type="checkbox"
+                                                                                            name="division_ids" value="{{ div.id }}"
+                                                                                            id="div-{{ div.id }}"
+                                                                                            onchange="toggleRoleSelect(this, 'role-{{ div.id }}')">
+                                                                                    </td>
+                                                                                    <td>
+                                                                                        <label class="form-check-label" for="div-{{ div.id }}">
+                                                                                            {{ div.name }}
+                                                                                        </label>
+                                                                                    </td>
+                                                                                    <td>
+                                                                                        <select class="form-select form-select-sm div-role-select" 
+                                                                                                name="role_{{ div.id }}" id="role-{{ div.id }}" disabled>
+                                                                                            <option value="user">User</option>
+                                                                                            <option value="approver">Approver</option>
+                                                                                        </select>
+                                                                                    </td>
+                                                                                </tr>
+                                                                                {% endfor %}
+                                                                            </tbody>
+                                                                        </table>
                                                                     </div>
-                                                                    {% endfor %}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -551,22 +583,52 @@
                                                                 </div>
                                                             </div>
                                                             <div class="col-lg-12">
-                                                                <label class="form-label">Divisions</label>
+                                                                <label class="form-label">Divisions & Roles</label>
                                                                 <div class="checkbox-grid">
-                                                                    {% for div in divisions %}
-                                                                    <div class="form-check">
-                                                                        <input class="form-check-input" type="checkbox"
-                                                                            name="division_ids" value="{{ div.id }}"
-                                                                            id="edit-div-{{ user.id }}-{{ div.id }}" {%
-                                                                            if div in user.divisions %}checked{% endif
-                                                                            %}>
-                                                                        <label class="form-check-label"
-                                                                            for="edit-div-{{ user.id }}-{{ div.id }}">
-                                                                            {{ div.name }}
-                                                                        </label>
-                                                                    </div>
+                                                                    {% set user_div_roles = {} %}
+                                                                    {% for assoc in user.division_associations %}
+                                                                        {% set _ = user_div_roles.update({assoc.division_id: assoc.role}) %}
                                                                     {% endfor %}
+                                                                    <div class="table-responsive">
+                                                                        <table class="table table-sm table-borderless align-middle mb-0">
+                                                                            <thead>
+                                                                                <tr>
+                                                                                    <th style="width: 40px;"></th>
+                                                                                    <th>Division</th>
+                                                                                    <th>Role in Division</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                {% for div in divisions %}
+                                                                                <tr>
+                                                                                    <td>
+                                                                                        <input class="form-check-input" type="checkbox"
+                                                                                            name="division_ids" value="{{ div.id }}"
+                                                                                            id="edit-div-{{ user.id }}-{{ div.id }}"
+                                                                                            {% if div.id in user_div_roles %}checked{% endif %}
+                                                                                            onchange="toggleRoleSelect(this, 'edit-role-{{ user.id }}-{{ div.id }}')">
+                                                                                    </td>
+                                                                                    <td>
+                                                                                        <label class="form-check-label" for="edit-div-{{ user.id }}-{{ div.id }}">
+                                                                                            {{ div.name }}
+                                                                                        </label>
+                                                                                    </td>
+                                                                                    <td>
+                                                                                        <select class="form-select form-select-sm div-role-select" 
+                                                                                                name="role_{{ div.id }}" 
+                                                                                                id="edit-role-{{ user.id }}-{{ div.id }}"
+                                                                                                {% if div.id not in user_div_roles %}disabled{% endif %}>
+                                                                                            <option value="user" {% if user_div_roles.get(div.id) == 'user' %}selected{% endif %}>User</option>
+                                                                                            <option value="approver" {% if user_div_roles.get(div.id) == 'approver' %}selected{% endif %}>Approver</option>
+                                                                                        </select>
+                                                                                    </td>
+                                                                                </tr>
+                                                                                {% endfor %}
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
                                                                 </div>
+
                                                             </div>
                                                         </div>
                                                     </div>

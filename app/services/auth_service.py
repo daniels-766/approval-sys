@@ -1,7 +1,7 @@
 import bcrypt
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
-from app.models.division import Division
+from app.models.division import Division, UserDivision
 from app.models.user import User
 
 
@@ -34,8 +34,9 @@ def create_user(
     password: str,
     full_name: str,
     role: str = "user",
+    division_roles: dict[int, str] | None = None,
 ) -> User:
-    """Create a new user."""
+    """Create a new user with optional division-specific roles."""
     user = User(
         username=username,
         email=email,
@@ -44,6 +45,13 @@ def create_user(
         role=role,
     )
     db.add(user)
+    db.flush()  # To get user.id
+
+    if division_roles:
+        for div_id, div_role in division_roles.items():
+            assoc = UserDivision(user_id=user.id, division_id=div_id, role=div_role)
+            db.add(assoc)
+
     db.commit()
     db.refresh(user)
     return user
@@ -96,9 +104,9 @@ def update_user(
     full_name: str,
     role: str,
     is_active: bool,
-    division_ids: list[int] | None = None,
+    division_roles: dict[int, str] | None = None, # {division_id: role}
 ) -> User | None:
-    """Update user profile, access, and division assignments."""
+    """Update user profile, access, and division assignments with specific roles."""
     user = get_user_by_id(db, user_id)
     if not user:
         return None
@@ -107,13 +115,16 @@ def update_user(
     user.full_name = full_name
     user.role = role if role in ("user", "approver", "admin", "finance") else "user"
     user.is_active = is_active
-    if division_ids is not None:
-        user.divisions = (
-            db.query(Division)
-            .filter(Division.id.in_(division_ids))
-            .order_by(Division.name)
-            .all()
-        )
+
+    if division_roles is not None:
+        # Clear existing associations
+        db.query(UserDivision).filter(UserDivision.user_id == user_id).delete()
+        
+        # Add new associations
+        for div_id, div_role in division_roles.items():
+            assoc = UserDivision(user_id=user_id, division_id=div_id, role=div_role)
+            db.add(assoc)
+
     db.commit()
     db.refresh(user)
     return user

@@ -28,7 +28,7 @@ async def session_timeout_middleware(request: Request, call_next):
     if path.startswith("/static") or path in ["/login", "/logout", "/register"]:
         return await call_next(request)
 
-    TIMEOUT_SECONDS = 300  # 5 minutes
+    TIMEOUT_SECONDS = 1800  # 30 minutes
     user_id = request.session.get("user_id")
 
     if user_id:
@@ -111,6 +111,18 @@ def on_startup():
                     )
                 )
 
+            # New migrations for Per-Division Roles
+            if not _mysql_has_column("categories", "division_id"):
+                conn.execute(text("ALTER TABLE categories ADD COLUMN division_id INT NULL"))
+                conn.execute(text("ALTER TABLE categories ADD CONSTRAINT fk_categories_division FOREIGN KEY (division_id) REFERENCES divisions(id)"))
+
+            if not _mysql_has_column("submissions", "division_id"):
+                conn.execute(text("ALTER TABLE submissions ADD COLUMN division_id INT NULL"))
+                conn.execute(text("ALTER TABLE submissions ADD CONSTRAINT fk_submissions_division FOREIGN KEY (division_id) REFERENCES divisions(id)"))
+
+            if not _mysql_has_column("user_divisions", "role"):
+                conn.execute(text("ALTER TABLE user_divisions ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'user'"))
+
         if engine.dialect.name == "sqlite":
             # Add new columns if missing (SQLite supports ADD COLUMN).
             def _sqlite_has_column(table: str, col: str) -> bool:
@@ -134,8 +146,13 @@ def on_startup():
                         "ADD COLUMN kind TEXT NOT NULL DEFAULT 'submission'"
                     )
                 )
-
-            # Users.role Enum in SQLite is implemented as a CHECK constraint on existing DBs.
+            
+            if not _sqlite_has_column("categories", "division_id"):
+                conn.execute(text("ALTER TABLE categories ADD COLUMN division_id INTEGER NULL"))
+            if not _sqlite_has_column("submissions", "division_id"):
+                conn.execute(text("ALTER TABLE submissions ADD COLUMN division_id INTEGER NULL"))
+            if not _sqlite_has_column("user_divisions", "role"):
+                conn.execute(text("ALTER TABLE user_divisions ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'user'"))
             # If the existing constraint doesn't include new roles, recreate the users table.
             users_ddl = conn.execute(
                 text("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'")

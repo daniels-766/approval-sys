@@ -139,9 +139,15 @@
                     <ul class="navbar-nav" id="navbar-nav">
                         <li class="menu-title"><span data-key="t-menu">Menu</span></li>
                         <li class="nav-item">
+                            {% if session.get('role') == 'approver' %}
                             <a class="nav-link menu-link" href="/approver/dashboard">
                                 <i class="ri-dashboard-2-line"></i> <span>My Requests</span>
                             </a>
+                            {% else %}
+                            <a class="nav-link menu-link" href="/user/dashboard">
+                                <i class="ri-dashboard-2-line"></i> <span>My Submissions</span>
+                            </a>
+                            {% endif %}
                         </li>
                         <li class="nav-item">
                             <a class="nav-link menu-link" href="/approver/approvals">

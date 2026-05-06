@@ -32,7 +32,8 @@ class User(Base):
     reviewed_submissions = relationship(
         "Submission", back_populates="reviewer", foreign_keys="Submission.reviewed_by"
     )
-    divisions = relationship("Division", secondary="user_divisions", back_populates="users")
+    divisions = relationship("Division", secondary="user_divisions", back_populates="users", viewonly=True)
+    division_associations = relationship("UserDivision", back_populates="user")
 
     def __repr__(self):
         return f"<User {self.username} ({self.role})>"

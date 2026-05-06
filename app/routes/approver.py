@@ -25,9 +25,16 @@ templates = Jinja2Templates(directory="app/templates")
 def require_approver(request: Request) -> int | None:
     user_id = request.session.get("user_id")
     role = request.session.get("role")
-    if not user_id or role != "approver":
+    is_approver = request.session.get("is_approver", False)
+    
+    if not user_id:
         return None
-    return int(user_id)
+        
+    # Allow if global role is approver OR if they have per-division approver role
+    if role == "approver" or is_approver:
+        return int(user_id)
+        
+    return None
 
 
 def _parse_int(value: str | None) -> int | None:

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 from fastapi import UploadFile
 from app.models.category import Category
-from app.models.division import Division
+from app.models.division import Division, UserDivision
 from app.models.submission import Submission, SubmissionAttachment, SubmissionAudit
 from app.models.approval_step import ApprovalStep
 from app.models.user import User
@@ -109,6 +109,24 @@ def get_approval_steps_for_category(db: Session, category_id: int) -> list[Appro
     )
 
 
+def get_user_role_in_division(db: Session, user_id: int, division_id: int) -> str:
+    """Get the specific role of a user within a division."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return "user"
+    
+    # Admins, Finance, and Global Approvers are respected across all divisions
+    if user.role in ("admin", "finance", "approver"):
+        return user.role
+        
+    assoc = db.query(UserDivision).filter(
+        UserDivision.user_id == user_id,
+        UserDivision.division_id == division_id
+    ).first()
+    
+    return assoc.role if assoc else "user"
+
+
 def get_total_steps_for_submission(db: Session, submission: Submission) -> int:
     # Special routing requested:
     # - If requester is a "user": only "approver" approves (single-step).
@@ -130,12 +148,17 @@ def get_required_role_for_submission_step(db: Session, submission: Submission) -
     # - requester "user"  -> required approver role is "approver"
     # - requester "approver" -> required approver role is "admin"
     # This overrides category-based workflow.
-    requester_role = None
-    if submission.user:
-        requester_role = submission.user.role
-    else:
-        requester = db.query(User).filter(User.id == submission.user_id).first()
-        requester_role = requester.role if requester else None
+    
+    # Get the division of the submission
+    division_id = submission.division_id
+    if not division_id and submission.category:
+        division_id = submission.category.division_id
+    
+    # Fallback: if no division is associated with submission/category, use requester's first division
+    if not division_id and submission.user and submission.user.divisions:
+        division_id = submission.user.divisions[0].id
+        
+    requester_role = get_user_role_in_division(db, submission.user_id, division_id or 0)
 
     if requester_role == "user":
         return "approver"
@@ -161,10 +184,26 @@ def can_user_act_on_submission(db: Session, submission: Submission, actor: User,
     if action in ("approve", "reject", "revision"):
         if submission.status != "pending":
             return False
+            
         required = get_required_role_for_submission_step(db, submission)
+        
+        # Global Admin override
         if actor.role == "admin":
             return True
-        return actor.role == required
+            
+        # Check actor's role in the specific division of the submission
+        division_id = submission.division_id
+        if not division_id and submission.category:
+            division_id = submission.category.division_id
+            
+        # Fallback: if no division is associated, use requester's first division
+        if not division_id and submission.user and submission.user.divisions:
+            division_id = submission.user.divisions[0].id
+            
+        actor_role = get_user_role_in_division(db, actor.id, division_id or 0)
+        
+        return actor_role == required
+        
     if action == "pay":
         return actor.role in ("finance", "admin") and submission.status == "approved"
     return False
@@ -186,6 +225,15 @@ def create_submission(
     attachment_pairs = list(attachments or [])
     if document_path and document_original_name:
         attachment_pairs.insert(0, (document_path, document_original_name))
+    # Get division_id from category
+    from app.models.category import Category
+    category = db.query(Category).filter(Category.id == category_id).first()
+    division_id = category.division_id if category else None
+    if not division_id:
+        user = db.query(User).filter(User.id == user_id).first()
+        if user and user.divisions:
+            division_id = user.divisions[0].id
+
     submission = Submission(
         submission_code=code,
         user_id=user_id,
@@ -193,6 +241,7 @@ def create_submission(
         purpose=purpose,
         nominal=nominal,
         category_id=category_id,
+        division_id=division_id,
         document_path=document_path,
         document_original_name=document_original_name,
     )
@@ -278,7 +327,7 @@ def get_all_submissions(
     if category_id:
         query = query.filter(Submission.category_id == category_id)
     if division_id:
-        query = query.join(Submission.user).join(User.divisions).filter(Division.id == division_id)
+        query = query.filter(Submission.division_id == division_id)
     if user_id:
         query = query.filter(Submission.user_id == user_id)
     if date_from:
@@ -504,7 +553,10 @@ def revise_submission(
     submission.name = name
     submission.purpose = purpose
     submission.nominal = nominal
+    from app.models.category import Category
+    category = db.query(Category).filter(Category.id == category_id).first()
     submission.category_id = category_id
+    submission.division_id = category.division_id if category else None
     submission.status = "pending"
     submission.current_step = 1
     submission.reviewed_by = None

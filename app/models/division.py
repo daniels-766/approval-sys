@@ -5,13 +5,15 @@ from app.database import Base
 from app.utils.time_utils import get_now_naive
 
 
-# Many-to-many association table
-user_divisions = Table(
-    "user_divisions",
-    Base.metadata,
-    Column("user_id", Integer, ForeignKey("users.id"), primary_key=True),
-    Column("division_id", Integer, ForeignKey("divisions.id"), primary_key=True),
-)
+class UserDivision(Base):
+    __tablename__ = "user_divisions"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    division_id: Mapped[int] = mapped_column(ForeignKey("divisions.id"), primary_key=True)
+    role: Mapped[str] = mapped_column(String(20), default="user", server_default="user")
+
+    user = relationship("User", back_populates="division_associations")
+    division = relationship("Division", back_populates="user_associations")
 
 
 class Division(Base):
@@ -27,7 +29,8 @@ class Division(Base):
     )
 
     # Many-to-many relationship
-    users = relationship("User", secondary=user_divisions, back_populates="divisions")
+    users = relationship("User", secondary="user_divisions", back_populates="divisions", viewonly=True)
+    user_associations = relationship("UserDivision", back_populates="division")
 
     def __repr__(self):
         return f"<Division {self.name}>"

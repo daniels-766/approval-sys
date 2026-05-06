@@ -51,6 +51,10 @@ async def login(
     request.session["username"] = user.username
     request.session["full_name"] = user.full_name
     request.session["role"] = user.role
+    
+    # Check if user is an approver in any division or globally
+    is_any_approver = user.role == "approver" or any(assoc.role == "approver" for assoc in user.division_associations)
+    request.session["is_approver"] = is_any_approver
 
     if user.role == "admin":
         return RedirectResponse(url="/admin/dashboard", status_code=302)

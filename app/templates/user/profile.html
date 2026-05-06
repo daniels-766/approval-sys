@@ -143,6 +143,13 @@
                                 <i class="ri-dashboard-2-line"></i> <span>My Submissions</span>
                             </a>
                         </li>
+                        {% if session.get('is_approver') %}
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="/approver/approvals">
+                                <i class="ri-checkbox-multiple-line"></i> <span>Approvals</span>
+                            </a>
+                        </li>
+                        {% endif %}
                         <li class="nav-item">
                             <a class="nav-link menu-link active" href="/user/profile">
                                 <i class="ri-account-circle-line"></i> <span>Profile</span>
